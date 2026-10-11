@@ -1,0 +1,106 @@
+{
+  "@@locale": "ur",
+  "@@last_modified": "2026-10-11",
+
+  "appName": "کلاس کھاتہ",
+
+  "loading": "لوڈ ہو رہا ہے…",
+  "save": "محفوظ کریں",
+  "cancel": "منسوخ کریں",
+  "delete": "حذف کریں",
+  "edit": "ترمیم کریں",
+  "add": "شامل کریں",
+  "search": "تلاش کریں",
+  "next": "اگلا",
+  "back": "پچھلا",
+  "finish": "مکمل کریں",
+  "confirm": "تصدیق کریں",
+  "yes": "ہاں",
+  "no": "نہیں",
+  "close": "بند کریں",
+  "submit": "جمع کریں",
+  "print": "پرنٹ کریں",
+  "export": "برآمد کریں",
+  "import": "درآمد کریں",
+  "refresh": "تازہ کریں",
+
+  "navDashboard": "ڈیش بورڈ",
+  "navStudents": "طلباء",
+  "navFees": "فیس",
+  "navPayroll": "تنخواہ",
+  "navInventory": "انوینٹری",
+  "navReports": "رپورٹس",
+  "navSettings": "ترتیبات",
+
+  "loginTitle": "کلاس کھاتہ میں خوش آمدید",
+  "loginSubtitle": "جاری رکھنے کے لیے سائن ان کریں",
+  "email": "ای میل",
+  "password": "پاس ورڈ",
+  "signIn": "سائن ان",
+  "forgotPassword": "پاس ورڈ بھول گئے؟",
+  "loginFailed": "ای میل یا پاس ورڈ غلط ہے۔",
+  "accountLocked": "اکاؤنٹ مقفل ہے۔ {minutes} منٹ بعد کوشش کریں۔",
+  "@accountLocked": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+
+  "setupTitle": "کلاس کھاتہ میں خوش آمدید",
+  "setupSubtitle": "چند آسان مراحل میں اپنی اکیڈمی ترتیب دیں۔",
+  "setupStep1": "اکیڈمی پروفائل",
+  "setupStep2": "ایڈمن اکاؤنٹ",
+  "setupStep3": "بازیابی کلید",
+  "academyName": "اکیڈمی کا نام",
+  "academyTagline": "ٹیگ لائن (اختیاری)",
+  "academyPhone": "فون نمبر",
+  "academyAddress": "پتہ",
+  "adminName": "آپ کا نام",
+  "adminEmail": "ایڈمن ای میل",
+  "adminPassword": "پاس ورڈ",
+  "confirmPassword": "پاس ورڈ کی تصدیق کریں",
+  "passwordMismatch": "پاس ورڈ مطابقت نہیں رکھتا۔",
+  "passwordTooShort": "پاس ورڈ کم از کم 8 حروف کا ہونا چاہیے۔",
+  "recoveryKeyTitle": "اپنی بازیابی کلید محفوظ کریں",
+  "recoveryKeyWarning": "یہ کلید صرف ایک بار دکھائی جائے گی۔ اسے محفوظ جگہ پر رکھیں — گم ہونے پر دوبارہ نہیں مل سکتی۔",
+  "recoveryKeyCopied": "بازیابی کلید کلپ بورڈ پر کاپی ہو گئی۔",
+  "setupComplete": "سیٹ اپ مکمل",
+  "setupCompleteMsg": "کلاس کھاتہ استعمال کے لیے تیار ہے۔",
+
+  "statusPaid": "ادا شدہ",
+  "statusPending": "زیر التواء",
+  "statusOverdue": "مدت گزری",
+  "statusPartial": "جزوی",
+  "statusActive": "فعال",
+  "statusInactive": "غیر فعال",
+
+  "errorUnexpected": "غیر متوقع غلطی ہوئی۔ دوبارہ کوشش کریں۔",
+  "errorPermission": "آپ کو یہ کام کرنے کی اجازت نہیں ہے۔",
+  "errorDatabase": "ڈیٹا بیس میں غلطی ہوئی۔ سپورٹ سے رابطہ کریں۔",
+  "errorValidation": "نشان زدہ خانوں کو چیک کریں۔",
+
+  "currency": "روپے",
+  "noData": "کوئی ڈیٹا نہیں ملا۔",
+  "confirmDeleteTitle": "حذف کرنے کی تصدیق",
+  "confirmDeleteMessage": "کیا آپ واقعی اس آئٹم کو حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہو سکتا۔",
+
+  "backupSuccess": "بیک اپ کامیابی سے بنایا گیا۔",
+  "backupFailed": "بیک اپ ناکام ہوا۔ دوبارہ کوشش کریں۔",
+  "restoreSuccess": "ڈیٹا بیس کامیابی سے بحال ہوا۔",
+  "restoreFailed": "بحالی ناکام ہوئی۔ بیک اپ فائل خراب ہو سکتی ہے۔",
+
+  "auditIntegrityOk": "آڈٹ لاگ کی سالمیت جانچ کامیاب رہی۔",
+  "auditIntegrityFailed": "آڈٹ لاگ کی سالمیت جانچ ناکام ہوئی۔ لاگ سے چھیڑ چھاڑ ہو سکتی ہے۔",
+
+  "trialDaysRemaining": "آپ کے ٹرائل میں {days} دن باقی ہیں۔",
+  "@trialDaysRemaining": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "trialExpired": "آپ کا ٹرائل ختم ہو گیا ہے۔ لائسنس فعال کریں۔",
+  "licenseActive": "لائسنس فعال ہے۔",
+
+  "autoLockMessage": "سیشن غیر فعالیت کی وجہ سے مقفل ہو گیا۔",
+  "unlockSession": "سیشن کھولیں"
+}

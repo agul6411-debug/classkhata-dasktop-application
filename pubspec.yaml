@@ -1,0 +1,98 @@
+name: classkhata
+description: ClassKhata – Offline school/academy management for Windows.
+version: 1.0.0+1
+publish_to: none
+
+environment:
+  sdk: ">=3.9.0 <4.0.0"
+  flutter: ">=3.24.0"
+
+# ---------------------------------------------------------------------------
+# SQLite3MultipleCiphers encryption via build hooks
+# Note: hooks key is supported in Dart >= 3.12; for 3.11 we use the
+#       NativeDatabase.createInBackground setup callback instead (already in
+#       app_database.dart). This section is kept for when SDK is upgraded.
+# ---------------------------------------------------------------------------
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management (Riverpod 2.x is compatible with Dart 3.11)
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.3.5
+
+  # Database (Drift 2.x + sqlite3_flutter_libs)
+  drift: ^2.20.3
+  sqlite3_flutter_libs: ^0.5.26
+
+  # Secure key storage (Windows Credential Manager + AES-GCM)
+  flutter_secure_storage: ^9.2.2
+
+  # Password hashing (Argon2id, prebuilt Windows binaries)
+  serverpod_argon2: ^0.1.0
+
+  # Navigation
+  go_router: ^14.6.2
+
+  # PDF, printing, Excel
+  pdf: ^3.11.1
+  printing: ^5.13.2
+  excel: ^4.0.3
+
+  # File paths
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
+  # UI preferences only
+  shared_preferences: ^2.3.3
+
+  # WhatsApp links
+  url_launcher: ^6.3.1
+
+  # QR codes on receipts
+  qr_flutter: ^4.1.0
+
+  # Crypto utilities (SHA-256 for audit chain, backup checksums)
+  crypto: ^3.0.5
+  pointycastle: ^3.9.1
+
+  # Utilities
+  intl: ^0.20.2
+  uuid: ^4.5.1
+  collection: ^1.18.0
+  equatable: ^2.0.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+  # Drift code generation
+  drift_dev: ^2.20.3
+  build_runner: ^2.4.13
+
+  # Riverpod code generation (2.x works with Dart 3.11)
+  riverpod_generator: ^2.4.3
+
+flutter:
+  uses-material-design: true
+  generate: true   # enables flutter_localizations code generation
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/fonts/
+
+  # fonts:
+  #   - family: Nunito
+  #     fonts:
+  #       - asset: assets/fonts/Nunito-Regular.ttf
+  #       - asset: assets/fonts/Nunito-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/Nunito-SemiBold.ttf
+  #         weight: 600
+  #       - asset: assets/fonts/Nunito-Bold.ttf
+  #         weight: 700
