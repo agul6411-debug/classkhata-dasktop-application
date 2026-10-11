@@ -64,5 +64,32 @@ void main() {
       expect(res.isFailure, true);
       expect(res.fold(onSuccess: (_) => null, onFailure: (f) => f)?.message, contains('Name cannot be empty'));
     });
+
+    test('BulkImportStudentsUseCase detects duplicate student phone in import batch', () async {
+      final repo = MockStudentRepository();
+      final useCase = BulkImportStudentsUseCase(repo);
+
+      final duplicateRows = [
+        const StudentImportRow(
+          name: 'Student One',
+          guardianPhone: '03001111111',
+          phone: '03219999999',
+        ),
+        const StudentImportRow(
+          name: 'Student Two',
+          guardianPhone: '03002222222',
+          phone: '03219999999',
+        ),
+      ];
+
+      final res = await useCase(
+        rawRows: duplicateRows,
+        batchId: 1,
+        createdBy: 1,
+      );
+
+      expect(res.isFailure, true);
+      expect(res.fold(onSuccess: (_) => null, onFailure: (f) => f)?.message, contains('Duplicate student phone'));
+    });
   });
 }

@@ -21,6 +21,7 @@ class BulkImportStudentsUseCase {
       return const Failure(ValidationFailure('Import list is empty.'));
     }
 
+    final seenPhones = <String>{};
     final sanitizedRows = <StudentImportRow>[];
 
     for (int i = 0; i < rawRows.length; i++) {
@@ -36,6 +37,13 @@ class BulkImportStudentsUseCase {
       }
       if (cleanGuardianPhone.isEmpty) {
         return Failure(ValidationFailure('Row ${i + 1}: Guardian phone cannot be empty.'));
+      }
+
+      if (cleanPhone != null && cleanPhone.isNotEmpty) {
+        if (seenPhones.contains(cleanPhone)) {
+          return Failure(ValidationFailure('Row ${i + 1}: Duplicate student phone ($cleanPhone) detected.'));
+        }
+        seenPhones.add(cleanPhone);
       }
 
       sanitizedRows.add(StudentImportRow(
