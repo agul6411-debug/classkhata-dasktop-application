@@ -37,6 +37,7 @@ class SettingsController {
     String? tagline,
     String? phone,
     String? address,
+    String? logoPath,
   }) async {
     final existing = await (_db.select(_db.academyProfileTable)..limit(1)).getSingleOrNull();
     if (existing == null) {
@@ -46,6 +47,7 @@ class SettingsController {
               tagline: Value(tagline),
               phone: Value(phone),
               address: Value(address),
+              logoPath: Value(logoPath),
             ),
           );
     } else {
@@ -55,6 +57,7 @@ class SettingsController {
           tagline: Value(tagline),
           phone: Value(phone),
           address: Value(address),
+          logoPath: Value(logoPath),
           updatedAt: Value(DateTime.now()),
         ),
       );

@@ -12,7 +12,10 @@ enum ReportType {
   inventoryValuation,
   inventoryMovements,
   supplierLedger,
-  studentEnrollment;
+  studentEnrollment,
+  batchWiseFees,
+  courseWiseFees,
+  auditLog;
 
   String get displayName => switch (this) {
         ReportType.feeCollectionSummary => 'Fee Collection Summary',
@@ -24,6 +27,9 @@ enum ReportType {
         ReportType.inventoryMovements => 'Inventory Movement History',
         ReportType.supplierLedger => 'Supplier Ledger & Payables',
         ReportType.studentEnrollment => 'Student Enrollment & Strength',
+        ReportType.batchWiseFees => 'Batch-wise Fee Summary',
+        ReportType.courseWiseFees => 'Course-wise Fee Summary',
+        ReportType.auditLog => 'Audit Log & Cryptographic Verification',
       };
 
   String get description => switch (this) {
@@ -36,6 +42,9 @@ enum ReportType {
         ReportType.inventoryMovements => 'Chronological audit of stock in, stock out, and adjustment movements.',
         ReportType.supplierLedger => 'Supplier purchases, payments made, and current payable balances.',
         ReportType.studentEnrollment => 'Complete directory of enrolled students and batch allocations.',
+        ReportType.batchWiseFees => 'Total invoiced, collected, and pending fee breakdown grouped by batch.',
+        ReportType.courseWiseFees => 'Tuition generated, paid, and overdue metrics grouped by course.',
+        ReportType.auditLog => 'Tamper-evident chronological audit chain with SHA-256 verification status.',
       };
 }
 

@@ -50,6 +50,10 @@ class UnexpectedFailure extends AppFailure {
   const UnexpectedFailure(super.message, {super.technicalDetail});
 }
 
+class LicenseExpiredFailure extends AppFailure {
+  const LicenseExpiredFailure(super.message, {super.technicalDetail});
+}
+
 // ---------------------------------------------------------------------------
 // Result type
 // ---------------------------------------------------------------------------

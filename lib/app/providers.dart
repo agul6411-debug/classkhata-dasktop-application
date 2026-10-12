@@ -4,12 +4,17 @@
 /// Features import from this file for database, security, and logger access.
 library;
 
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../core/constants/app_constants.dart';
 import '../core/database/app_database.dart';
-import '../core/security/password_hasher.dart';
-import '../core/security/key_store.dart';
 import '../core/logging/app_logger.dart';
+import '../core/security/key_store.dart';
+import '../core/security/password_hasher.dart';
+import '../core/services/startup_integrity_service.dart';
 
 part 'providers.g.dart';
 
@@ -44,3 +49,15 @@ class ThemeModeNotifier extends _$ThemeModeNotifier {
 
   void setTheme(String mode) => state = mode;
 }
+
+// ---------------------------------------------------------------------------
+// Startup integrity check provider
+// ---------------------------------------------------------------------------
+
+final startupIntegrityProvider = FutureProvider<IntegrityCheckResult>((ref) async {
+  final db = ref.watch(appDatabaseProvider);
+  final dir = await getApplicationSupportDirectory();
+  final backupDir = Directory(p.join(dir.path, AppConstants.backupDirName));
+  final service = StartupIntegrityService(db, backupDir);
+  return service.runStartupChecks();
+});

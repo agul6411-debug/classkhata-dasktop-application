@@ -14,6 +14,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/money/money.dart';
+import '../../../../core/security/audit_chain.dart';
 import '../../../../core/utils/validators.dart';
 import '../../domain/entities/report_entities.dart';
 import '../../domain/repositories/reports_repository.dart';
@@ -45,6 +46,12 @@ class ReportsRepositoryImpl implements ReportsRepository {
           return Success(await _buildSupplierLedger(filter, now));
         case ReportType.studentEnrollment:
           return Success(await _buildStudentEnrollment(filter, now));
+        case ReportType.batchWiseFees:
+          return Success(await _buildBatchWiseFees(filter, now));
+        case ReportType.courseWiseFees:
+          return Success(await _buildCourseWiseFees(filter, now));
+        case ReportType.auditLog:
+          return Success(await _buildAuditLog(filter, now));
       }
     } catch (e, st) {
       await AppLogger.instance.error('buildReport error', error: e, stack: st);
@@ -591,108 +598,344 @@ class ReportsRepositoryImpl implements ReportsRepository {
   }
 
   // ---------------------------------------------------------------------------
-  // PDF Generator
+  // 10. Batch-wise Fee Summary
+  // ---------------------------------------------------------------------------
+  Future<ReportData> _buildBatchWiseFees(ReportFilter filter, DateTime now) async {
+    final batches = await _db.select(_db.batchesTable).get();
+    final courses = await _db.select(_db.coursesTable).get();
+    final courseMap = {for (final c in courses) c.id: c.name};
+
+    final rows = <List<String>>[];
+    var grossInvoicedPaisa = 0;
+    var grossCollectedPaisa = 0;
+
+    for (final b in batches) {
+      final vouchers = await (_db.select(_db.feeVouchersTable)..where((v) => v.batchId.equals(b.id))).get();
+      final batchInvoiced = vouchers.fold(0, (sum, v) => sum + v.totalDuePaisa);
+      final batchCollected = vouchers.fold(0, (sum, v) => sum + v.amountPaidPaisa);
+      final batchPending = batchInvoiced - batchCollected;
+      grossInvoicedPaisa += batchInvoiced;
+      grossCollectedPaisa += batchCollected;
+
+      final rate = batchInvoiced > 0 ? ((batchCollected / batchInvoiced) * 100).toStringAsFixed(1) : '100.0';
+
+      rows.add([
+        b.name,
+        courseMap[b.courseId] ?? 'Unknown',
+        '${vouchers.length}',
+        Money.fromPaisa(batchInvoiced).format(),
+        Money.fromPaisa(batchCollected).format(),
+        Money.fromPaisa(batchPending).format(),
+        '$rate%',
+      ]);
+    }
+
+    final grossPendingPaisa = grossInvoicedPaisa - grossCollectedPaisa;
+    final overallRate = grossInvoicedPaisa > 0 ? ((grossCollectedPaisa / grossInvoicedPaisa) * 100).toStringAsFixed(1) : '100.0';
+
+    return ReportData(
+      type: filter.reportType,
+      title: 'Batch-wise Fee Summary',
+      subtitle: 'Invoiced, collected, and outstanding fee breakdown per batch',
+      headers: const ['Batch Name', 'Course', 'Vouchers', 'Invoiced', 'Collected', 'Pending', 'Recovery %'],
+      rows: rows,
+      summaryMetrics: {
+        'Total Invoiced': Money.fromPaisa(grossInvoicedPaisa).format(),
+        'Total Collected': Money.fromPaisa(grossCollectedPaisa).format(),
+        'Total Pending': Money.fromPaisa(grossPendingPaisa).format(),
+        'Overall Recovery': '$overallRate%',
+      },
+      generatedAt: now,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 11. Course-wise Fee Summary
+  // ---------------------------------------------------------------------------
+  Future<ReportData> _buildCourseWiseFees(ReportFilter filter, DateTime now) async {
+    final courses = await _db.select(_db.coursesTable).get();
+    final batches = await _db.select(_db.batchesTable).get();
+
+    final rows = <List<String>>[];
+    var grossInvoicedPaisa = 0;
+    var grossCollectedPaisa = 0;
+
+    for (final c in courses) {
+      final courseBatches = batches.where((b) => b.courseId == c.id).map((b) => b.id).toList();
+      var courseInvoiced = 0;
+      var courseCollected = 0;
+
+      if (courseBatches.isNotEmpty) {
+        final vouchers = await (_db.select(_db.feeVouchersTable)
+              ..where((v) => v.batchId.isIn(courseBatches)))
+            .get();
+        courseInvoiced = vouchers.fold(0, (sum, v) => sum + v.totalDuePaisa);
+        courseCollected = vouchers.fold(0, (sum, v) => sum + v.amountPaidPaisa);
+      }
+
+      final coursePending = courseInvoiced - courseCollected;
+      grossInvoicedPaisa += courseInvoiced;
+      grossCollectedPaisa += courseCollected;
+
+      rows.add([
+        c.code ?? '',
+        c.name,
+        '${courseBatches.length}',
+        Money.fromPaisa(courseInvoiced).format(),
+        Money.fromPaisa(courseCollected).format(),
+        Money.fromPaisa(coursePending).format(),
+      ]);
+    }
+
+    final grossPendingPaisa = grossInvoicedPaisa - grossCollectedPaisa;
+
+    return ReportData(
+      type: filter.reportType,
+      title: 'Course-wise Fee Summary',
+      subtitle: 'Course tuition billing, collections, and outstanding ledger',
+      headers: const ['Course Code', 'Course Name', 'Batches', 'Invoiced', 'Collected', 'Pending'],
+      rows: rows,
+      summaryMetrics: {
+        'Total Invoiced': Money.fromPaisa(grossInvoicedPaisa).format(),
+        'Total Collected': Money.fromPaisa(grossCollectedPaisa).format(),
+        'Total Pending': Money.fromPaisa(grossPendingPaisa).format(),
+      },
+      generatedAt: now,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 12. Audit Log & Cryptographic Verification
+  // ---------------------------------------------------------------------------
+  Future<ReportData> _buildAuditLog(ReportFilter filter, DateTime now) async {
+    final rowsData = await (_db.select(_db.auditLogTable)
+          ..orderBy([(t) => OrderingTerm.desc(t.id)])
+          ..limit(500))
+        .get();
+
+    final entries = rowsData.reversed.map((r) => AuditEntry(
+      id: r.id,
+      action: r.action,
+      entityType: r.entityType,
+      entityId: r.entityId,
+      userId: r.userId,
+      createdAt: r.createdAt,
+      details: r.details,
+      previousHash: r.previousHash,
+      entryHash: r.entryHash,
+    )).toList();
+
+    final verifyRes = verifyAuditChain(entries);
+    final isChainIntact = verifyRes.fold(onSuccess: (_) => true, onFailure: (_) => false);
+
+    final rows = rowsData.map((r) {
+      final prevShort = r.previousHash.length > 8 ? '${r.previousHash.substring(0, 8)}...' : r.previousHash;
+      final hashShort = r.entryHash.length > 8 ? '${r.entryHash.substring(0, 8)}...' : r.entryHash;
+      final ts = '${r.createdAt.year}-${r.createdAt.month.toString().padLeft(2, '0')}-${r.createdAt.day.toString().padLeft(2, '0')} ${r.createdAt.hour.toString().padLeft(2, '0')}:${r.createdAt.minute.toString().padLeft(2, '0')}';
+      return [
+        '#${r.id}',
+        ts,
+        r.action,
+        r.entityType,
+        'User #${r.userId}',
+        prevShort,
+        hashShort,
+      ];
+    }).toList();
+
+    return ReportData(
+      type: filter.reportType,
+      title: 'Audit Log & Cryptographic Verification',
+      subtitle: 'SHA-256 hash-chained financial and system event register',
+      headers: const ['ID', 'Timestamp', 'Action', 'Entity', 'User', 'Prev Hash', 'Entry Hash'],
+      rows: rows,
+      summaryMetrics: {
+        'Total Events': '${rowsData.length}',
+        'Chain Integrity': isChainIntact ? 'VERIFIED (Intact)' : 'TAMPERED / BROKEN',
+      },
+      generatedAt: now,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // PDF Generator (A4 Landscape & 80mm Thermal Slip)
   // ---------------------------------------------------------------------------
   @override
-  Future<Result<List<int>>> generatePdfBytes(ReportData data, {String academyName = 'ClassKhata Academy'}) async {
+  Future<Result<List<int>>> generatePdfBytes(
+    ReportData data, {
+    String academyName = 'ClassKhata Academy',
+    bool isThermal = false,
+  }) async {
     try {
       final doc = pw.Document();
 
-      doc.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4.landscape,
-          margin: const pw.EdgeInsets.all(24),
-          header: (context) {
-            return pw.Container(
-              margin: const pw.EdgeInsets.only(bottom: 16),
-              decoration: const pw.BoxDecoration(
-                border: pw.Border(bottom: pw.BorderSide(color: PdfColors.teal, width: 1.5)),
-              ),
-              padding: const pw.EdgeInsets.only(bottom: 8),
-              child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      if (isThermal) {
+        // 80mm Roll Thermal Receipt / Slip
+        doc.addPage(
+          pw.Page(
+            pageFormat: PdfPageFormat.roll80,
+            margin: const pw.EdgeInsets.all(12),
+            build: (context) {
+              return pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                 children: [
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(academyName, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
-                      pw.SizedBox(height: 2),
-                      pw.Text(data.title, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey800)),
-                      pw.Text(data.subtitle, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
-                    ],
+                  pw.Center(
+                    child: pw.Text(
+                      academyName,
+                      style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+                      textAlign: pw.TextAlign.center,
+                    ),
                   ),
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.end,
-                    children: [
-                      pw.Text('OFFICIAL REPORT', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
-                      pw.Text('Date: ${data.generatedAt.day}/${data.generatedAt.month}/${data.generatedAt.year}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
-                    ],
+                  pw.SizedBox(height: 2),
+                  pw.Center(
+                    child: pw.Text(
+                      data.title,
+                      style: const pw.TextStyle(fontSize: 10),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.Center(
+                    child: pw.Text(
+                      'Date: ${data.generatedAt.day}/${data.generatedAt.month}/${data.generatedAt.year}',
+                      style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                    ),
+                  ),
+                  pw.Divider(thickness: 0.8),
+                  if (data.summaryMetrics.isNotEmpty) ...[
+                    pw.Text('SUMMARY METRICS', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                    pw.SizedBox(height: 4),
+                    ...data.summaryMetrics.entries.map((e) => pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text(e.key, style: const pw.TextStyle(fontSize: 8)),
+                        pw.Text(e.value, style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                      ],
+                    )),
+                    pw.Divider(thickness: 0.8),
+                  ],
+                  pw.Text('RECORDS (${data.rows.length})', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 4),
+                  ...data.rows.take(25).map((r) => pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 2),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Expanded(child: pw.Text(r.isNotEmpty ? r[0] : '', style: const pw.TextStyle(fontSize: 7))),
+                        pw.Text(r.length > 3 ? r[3] : (r.isNotEmpty ? r.last : ''), style: const pw.TextStyle(fontSize: 7)),
+                      ],
+                    ),
+                  )),
+                  if (data.rows.length > 25)
+                    pw.Center(
+                      child: pw.Text('...and ${data.rows.length - 25} more records', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
+                    ),
+                  pw.Divider(thickness: 0.8),
+                  pw.Center(
+                    child: pw.Text('ClassKhata Desktop System', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700)),
                   ),
                 ],
-              ),
-            );
-          },
-          footer: (context) {
-            return pw.Container(
-              margin: const pw.EdgeInsets.only(top: 12),
-              padding: const pw.EdgeInsets.only(top: 6),
-              decoration: const pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300, width: 0.5))),
-              child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('ClassKhata Financial Management Application', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
-                  pw.Text('Page ${context.pageNumber} of ${context.pagesCount}', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+              );
+            },
+          ),
+        );
+      } else {
+        // Landscape A4 Page
+        doc.addPage(
+          pw.MultiPage(
+            pageFormat: PdfPageFormat.a4.landscape,
+            margin: const pw.EdgeInsets.all(24),
+            header: (context) {
+              return pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 16),
+                decoration: const pw.BoxDecoration(
+                  border: pw.Border(bottom: pw.BorderSide(color: PdfColors.teal, width: 1.5)),
+                ),
+                padding: const pw.EdgeInsets.only(bottom: 8),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(academyName, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
+                        pw.SizedBox(height: 2),
+                        pw.Text(data.title, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey800)),
+                        pw.Text(data.subtitle, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                      ],
+                    ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text('OFFICIAL REPORT', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
+                        pw.Text('Date: ${data.generatedAt.day}/${data.generatedAt.month}/${data.generatedAt.year}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+            footer: (context) {
+              return pw.Container(
+                margin: const pw.EdgeInsets.only(top: 12),
+                padding: const pw.EdgeInsets.only(top: 6),
+                decoration: const pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300, width: 0.5))),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('ClassKhata Financial Management Application', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+                    pw.Text('Page ${context.pageNumber} of ${context.pagesCount}', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+                  ],
+                ),
+              );
+            },
+            build: (context) {
+              return [
+                if (data.rows.isEmpty)
+                  pw.Center(
+                    child: pw.Padding(
+                      padding: const pw.EdgeInsets.all(32),
+                      child: pw.Text('No records matching the filter criteria.', style: const pw.TextStyle(color: PdfColors.grey600)),
+                    ),
+                  )
+                else
+                  pw.TableHelper.fromTextArray(
+                    headers: data.headers,
+                    data: data.rows,
+                    headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                    headerDecoration: const pw.BoxDecoration(color: PdfColors.teal700),
+                    cellStyle: const pw.TextStyle(fontSize: 8),
+                    cellAlignment: pw.Alignment.centerLeft,
+                    cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    rowDecoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200, width: 0.5))),
+                  ),
+                if (data.summaryMetrics.isNotEmpty) ...[
+                  pw.SizedBox(height: 16),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(10),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.grey100,
+                      borderRadius: pw.BorderRadius.circular(6),
+                      border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+                    ),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                      children: data.summaryMetrics.entries.map((e) {
+                        return pw.Column(
+                          children: [
+                            pw.Text(e.key, style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700, fontWeight: pw.FontWeight.bold)),
+                            pw.SizedBox(height: 3),
+                            pw.Text(e.value, style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.teal900)),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ],
-              ),
-            );
-          },
-          build: (context) {
-            return [
-              if (data.rows.isEmpty)
-                pw.Center(
-                  child: pw.Padding(
-                    padding: const pw.EdgeInsets.all(32),
-                    child: pw.Text('No records matching the filter criteria.', style: const pw.TextStyle(color: PdfColors.grey600)),
-                  ),
-                )
-              else
-                pw.TableHelper.fromTextArray(
-                  headers: data.headers,
-                  data: data.rows,
-                  headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-                  headerDecoration: const pw.BoxDecoration(color: PdfColors.teal700),
-                  cellStyle: const pw.TextStyle(fontSize: 8),
-                  cellAlignment: pw.Alignment.centerLeft,
-                  cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  rowDecoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200, width: 0.5))),
-                ),
-              if (data.summaryMetrics.isNotEmpty) ...[
-                pw.SizedBox(height: 16),
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(10),
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.grey100,
-                    borderRadius: pw.BorderRadius.circular(6),
-                    border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
-                  ),
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
-                    children: data.summaryMetrics.entries.map((e) {
-                      return pw.Column(
-                        children: [
-                          pw.Text(e.key, style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700, fontWeight: pw.FontWeight.bold)),
-                          pw.SizedBox(height: 3),
-                          pw.Text(e.value, style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.teal900)),
-                        ],
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-            ];
-          },
-        ),
-      );
+              ];
+            },
+          ),
+        );
+      }
 
       final bytes = await doc.save();
       return Success(bytes);

@@ -79,8 +79,46 @@ The app makes zero network calls. There is no analytics, crash reporting,
 or license server. License validation is done offline with public-key
 cryptography (Phase 7).
 
+## Offline Cryptographic Licensing (Phase 7)
+
+- **Asymmetric Signature Verification:** Licenses are signed using an RSA-2048 private key
+  retained exclusively on internal vendor workstations in `tools/generate_license.dart`.
+- **Public-Key Embedded Only:** The client application contains ONLY the public exponent
+  and modulus (`LicensingPublicKey.key`). No private keys are ever distributed in client binaries.
+- **Hardware Machine Binding:** Machine IDs are derived from stable Windows hardware attributes
+  (`COMPUTERNAME`, `PROCESSOR_IDENTIFIER`, `SystemDrive`) and hashed via SHA-256 (`CK-XXXX-XXXX-XXXX`).
+  License keys are cryptographically bound to the target machine ID.
+- **Trial & Clock Rollback Tamper Resistance:**
+  - 7-day trial start is signed and persisted across dual independent storage locations.
+  - Heartbeat checks compare current system time with monotonic `last_seen_epoch` records.
+  - Clock rollback attempts immediately place the system in non-destructive read-only mode.
+
+## Startup Integrity & Self-Healing (Phase 7)
+
+- Every launch executes:
+  1. SQLite storage engine validation via `PRAGMA integrity_check;`.
+  2. Cryptographic audit chain verification (`verifyAuditChain`) from genesis to head.
+  3. Automatic backup directory accessibility and write permissions test.
+- Any integrity failure displays clear, user-friendly non-technical alerts with
+  guidance to restore from backup or contact support.
+
 ## Input Sanitization
 
 - All Excel exports sanitize cells beginning with `=`, `+`, `-`, `@`
   (formula injection prevention).
 - All Drift queries use parameterized statements — no string-concatenated SQL.
+
+## Final Security Review Checklist
+
+| Security Control | Verification Standard | Implementation Status |
+|---|---|---|
+| **Database Encryption** | AES-256 via SQLite3MultipleCiphers, key in Windows Credential Store (DPAPI) | Verified & Tested |
+| **Password Storage** | Argon2id with per-user cryptographic salt | Verified & Tested |
+| **Recovery System** | 20-character single-use recovery key, only SHA-256 stored | Verified & Tested |
+| **Audit Ledger** | SHA-256 hash-chained immutable audit records with genesis verification | Verified & Tested |
+| **Maker-Checker** | Independent dual-authorization on transactions > threshold | Verified & Tested |
+| **Backup Integrity** | SHA-256 checksum verification, pre-migration backups, test restore sandbox | Verified & Tested |
+| **Offline Licensing** | RSA-2048 offline signature verification, public key only in client | Verified & Tested |
+| **Clock Rollback Protection** | Monotonic epoch validation, dual-storage trial anchor | Verified & Tested |
+| **Formula Injection** | Strict sanitization of `=`, `+`, `-`, `@` prefixes on Excel export | Verified & Tested |
+| **Zero Telemetry** | 100% offline desktop runtime, zero external network calls | Verified & Tested |

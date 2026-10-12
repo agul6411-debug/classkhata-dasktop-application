@@ -14,6 +14,7 @@ class ExportPdfUseCase {
     required Set<Permission> userPermissions,
     required ReportData data,
     String academyName = 'ClassKhata Academy',
+    bool isThermal = false,
   }) async {
     final permCheck = checkPermission(
       userPermissions: userPermissions,
@@ -23,7 +24,11 @@ class ExportPdfUseCase {
       return Failure(permCheck.fold(onSuccess: (_) => const UnexpectedFailure(''), onFailure: (f) => f));
     }
 
-    return _repository.generatePdfBytes(data, academyName: academyName);
+    return _repository.generatePdfBytes(
+      data,
+      academyName: academyName,
+      isThermal: isThermal,
+    );
   }
 }
 

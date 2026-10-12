@@ -14,6 +14,9 @@ import '../../features/backup/presentation/providers/backup_providers.dart';
 import '../../features/fees/presentation/widgets/fee_collection_wizard.dart';
 import '../../features/students/presentation/widgets/student_form_dialog.dart';
 
+import '../../features/licensing/presentation/widgets/license_banner.dart';
+import '../widgets/global_search_dialog.dart';
+
 class _NewStudentIntent extends Intent {
   const _NewStudentIntent();
 }
@@ -24,6 +27,14 @@ class _CollectFeeIntent extends Intent {
 
 class _TriggerBackupIntent extends Intent {
   const _TriggerBackupIntent();
+}
+
+class _GlobalSearchIntent extends Intent {
+  const _GlobalSearchIntent();
+}
+
+class _HelpShortcutsIntent extends Intent {
+  const _HelpShortcutsIntent();
 }
 
 class AppShell extends ConsumerWidget {
@@ -42,9 +53,20 @@ class AppShell extends ConsumerWidget {
         LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyN): const _NewStudentIntent(),
         LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyF): const _CollectFeeIntent(),
         LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyB): const _TriggerBackupIntent(),
+        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyK): const _GlobalSearchIntent(),
+        LogicalKeySet(LogicalKeyboardKey.f1): const _HelpShortcutsIntent(),
       },
       child: Actions(
         actions: <Type, Action<Intent>>{
+          _GlobalSearchIntent: CallbackAction<_GlobalSearchIntent>(
+            onInvoke: (_) => showDialog<void>(
+              context: context,
+              builder: (_) => const GlobalSearchDialog(),
+            ),
+          ),
+          _HelpShortcutsIntent: CallbackAction<_HelpShortcutsIntent>(
+            onInvoke: (_) => _showShortcutsHelp(context),
+          ),
           _NewStudentIntent: CallbackAction<_NewStudentIntent>(
             onInvoke: (_) => showDialog<bool>(
               context: context,
@@ -83,11 +105,171 @@ class AppShell extends ConsumerWidget {
               children: [
                 const _Sidebar(),
                 const VerticalDivider(width: 1),
-                Expanded(child: child),
+                Expanded(
+                  child: Column(
+                    children: [
+                      const LicenseBanner(),
+                      _buildTopHeaderBar(context),
+                      _buildIntegrityBanner(ref),
+                      const Divider(height: 1),
+                      Expanded(child: child),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTopHeaderBar(BuildContext context) {
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      color: AppColors.surface,
+      child: Row(
+        children: [
+          // Global Search Clickable Pill
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(6),
+              onTap: () => showDialog<void>(
+                context: context,
+                builder: (_) => const GlobalSearchDialog(),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.inputFill,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.search, size: 16, color: AppColors.textMuted),
+                    SizedBox(width: 8),
+                    Text(
+                      'Search students, staff, items, receipts... (Ctrl+K)',
+                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Quick shortcut buttons
+          Tooltip(
+            message: 'New Student (Ctrl+N)',
+            child: IconButton(
+              icon: const Icon(Icons.person_add_alt_1, size: 18, color: AppColors.heading),
+              onPressed: () => showDialog<bool>(context: context, builder: (_) => const StudentFormDialog()),
+            ),
+          ),
+          Tooltip(
+            message: 'Collect Fee (Ctrl+F)',
+            child: IconButton(
+              icon: const Icon(Icons.point_of_sale, size: 18, color: AppColors.accent),
+              onPressed: () => showDialog<bool>(context: context, builder: (_) => const FeeCollectionWizard()),
+            ),
+          ),
+          Tooltip(
+            message: 'Shortcuts Help (F1)',
+            child: IconButton(
+              icon: const Icon(Icons.help_outline, size: 18, color: AppColors.textMuted),
+              onPressed: () => _showShortcutsHelp(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIntegrityBanner(WidgetRef ref) {
+    final integrityAsync = ref.watch(startupIntegrityProvider);
+    return integrityAsync.when(
+      data: (res) {
+        if (res.isHealthy || res.userFriendlyMessage == null) {
+          return const SizedBox.shrink();
+        }
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: Colors.amber.shade100,
+          child: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.brown.shade800, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  res.userFriendlyMessage!,
+                  style: TextStyle(color: Colors.brown.shade900, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  void _showShortcutsHelp(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.keyboard, color: AppColors.accent),
+            SizedBox(width: 8),
+            Text('ClassKhata Keyboard Shortcuts'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ShortcutItem(keys: 'Ctrl + K', action: 'Open Global Search Palette'),
+            _ShortcutItem(keys: 'Ctrl + N', action: 'Register New Student'),
+            _ShortcutItem(keys: 'Ctrl + F', action: 'Quick Fee Collection Wizard'),
+            _ShortcutItem(keys: 'Ctrl + B', action: 'Trigger Instant Encrypted Backup'),
+            _ShortcutItem(keys: 'F1', action: 'Show This Shortcuts Reference'),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShortcutItem extends StatelessWidget {
+  final String keys;
+  final String action;
+  const _ShortcutItem({required this.keys, required this.action});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.inputFill,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Text(keys, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+          const SizedBox(width: 16),
+          Text(action, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        ],
       ),
     );
   }

@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/providers.dart';
@@ -12,6 +13,8 @@ import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../backup/presentation/providers/backup_providers.dart';
+import '../../../licensing/presentation/providers/licensing_providers.dart';
+import '../../../licensing/presentation/widgets/activation_dialog.dart';
 import '../providers/settings_providers.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -29,14 +32,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
   final _taglineCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
+  final _logoCtrl = TextEditingController();
+
+  // Template controllers
+  final _waTemplateCtrl = TextEditingController();
+  final _receiptFooterCtrl = TextEditingController();
 
   // Settings state
   int _dueDay = 10;
   bool _siblingDiscount = false;
   bool _lateFee = false;
+  bool _allowNegativeStock = false;
+  int _autoLockMinutes = 10;
   int _makerCheckerThreshold = 5000;
+  String _receiptStyle = 'a4';
+
+  // Backup settings
+  bool _autoBackupDaily = true;
+  int _backupRetention = 7;
 
   bool _isSavingProfile = false;
+  bool _isSavingTemplates = false;
   bool _isBackingUp = false;
   String? _statusMessage;
   bool _isError = false;
@@ -44,7 +60,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -54,6 +70,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
     _taglineCtrl.dispose();
     _phoneCtrl.dispose();
     _addressCtrl.dispose();
+    _logoCtrl.dispose();
+    _waTemplateCtrl.dispose();
+    _receiptFooterCtrl.dispose();
     super.dispose();
   }
 
@@ -78,6 +97,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
       tagline: _taglineCtrl.text.trim().isEmpty ? null : _taglineCtrl.text.trim(),
       phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
       address: _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
+      logoPath: _logoCtrl.text.trim().isEmpty ? null : _logoCtrl.text.trim(),
     );
 
     if (!mounted) return;
@@ -85,6 +105,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
     setState(() {
       _isSavingProfile = false;
       _statusMessage = 'Academy profile updated successfully.';
+      _isError = false;
+    });
+  }
+
+  Future<void> _saveTemplates() async {
+    setState(() {
+      _isSavingTemplates = true;
+      _statusMessage = null;
+    });
+
+    final ctrl = ref.read(settingsControllerProvider);
+    await ctrl.updateSetting('whatsapp_reminder_template', _waTemplateCtrl.text.trim());
+    await ctrl.updateSetting('receipt_footer_note', _receiptFooterCtrl.text.trim());
+    await ctrl.updateSetting('receipt_style', _receiptStyle);
+
+    if (!mounted) return;
+    ref.invalidate(appSettingsMapProvider);
+    setState(() {
+      _isSavingTemplates = false;
+      _statusMessage = 'Messaging & receipt templates updated.';
       _isError = false;
     });
   }
@@ -164,6 +204,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
           _taglineCtrl.text = profile.tagline ?? '';
           _phoneCtrl.text = profile.phone ?? '';
           _addressCtrl.text = profile.address ?? '';
+          _logoCtrl.text = profile.logoPath ?? '';
         }
       });
     });
@@ -174,7 +215,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
           _dueDay = int.tryParse(map['fee_due_day'] ?? '10') ?? 10;
           _siblingDiscount = map['sibling_discount_enabled'] == 'true';
           _lateFee = map['late_fee_enabled'] == 'true';
+          _allowNegativeStock = map['allow_negative_stock'] == 'true';
+          _autoLockMinutes = int.tryParse(map['auto_lock_minutes'] ?? '10') ?? 10;
           _makerCheckerThreshold = int.tryParse(map['maker_checker_threshold'] ?? '5000') ?? 5000;
+          _autoBackupDaily = map['auto_backup_enabled'] != 'false';
+          _backupRetention = int.tryParse(map['backup_retention_count'] ?? '7') ?? 7;
+          _receiptStyle = map['receipt_style'] ?? 'a4';
+          if (_waTemplateCtrl.text.isEmpty) {
+            _waTemplateCtrl.text = map['whatsapp_reminder_template'] ??
+                'Dear Parent, fee voucher for {student} of Rs. {amount} is due by {due_date}. Thank you, {academy}.';
+          }
+          if (_receiptFooterCtrl.text.isEmpty) {
+            _receiptFooterCtrl.text = map['receipt_footer_note'] ?? 'Fee once paid is non-refundable. Thank you!';
+          }
         });
       });
     });
@@ -199,7 +252,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Academy profile, operational rules, encrypted backups, and audit verification.',
+                      'Academy profile, policies, templates, encrypted backups, and offline licensing.',
                       style: TextStyle(color: AppColors.textMuted, fontSize: 13),
                     ),
                   ],
@@ -226,8 +279,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                 indicatorWeight: 3,
                 tabs: const [
                   Tab(text: 'Academy Profile'),
-                  Tab(text: 'Policies & Rules'),
+                  Tab(text: 'Policies & Security'),
+                  Tab(text: 'Templates & Messaging'),
                   Tab(text: 'Backups & Recovery'),
+                  Tab(text: 'Licensing & Activation'),
                   Tab(text: 'Display & Preferences'),
                 ],
               ),
@@ -266,7 +321,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                 children: [
                   _buildProfileTab(),
                   _buildPoliciesTab(),
+                  _buildTemplatesTab(),
                   _buildBackupsTab(),
+                  _buildLicensingTab(),
                   _buildPreferencesTab(),
                 ],
               ),
@@ -283,7 +340,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
   Widget _buildProfileTab() {
     return SingleChildScrollView(
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 600),
+        constraints: const BoxConstraints(maxWidth: 650),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -295,7 +352,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
           children: [
             const Text('Academy Profile & Receipt Header', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 4),
-            const Text('Printed on all student fee receipts, cards, and payslips.', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+            const Text('Displayed on all student fee receipts, cards, and reports.', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
             const Divider(height: 24),
             AppTextField(controller: _nameCtrl, label: 'Academy / School Name *'),
             const SizedBox(height: 12),
@@ -304,6 +361,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
             AppTextField(controller: _phoneCtrl, label: 'Official Contact Phone'),
             const SizedBox(height: 12),
             AppTextField(controller: _addressCtrl, label: 'Official Campus Address'),
+            const SizedBox(height: 12),
+            AppTextField(controller: _logoCtrl, label: 'Academy Logo File Path (Optional)'),
             const SizedBox(height: 24),
             Align(
               alignment: Alignment.centerRight,
@@ -320,12 +379,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
   }
 
   // ---------------------------------------------------------------------------
-  // Tab 2: Policies & Rules
+  // Tab 2: Policies & Security
   // ---------------------------------------------------------------------------
   Widget _buildPoliciesTab() {
     return SingleChildScrollView(
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 600),
+        constraints: const BoxConstraints(maxWidth: 650),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -375,10 +434,42 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
               },
             ),
             const Divider(),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Allow Negative Inventory Stock'),
+              subtitle: const Text('Permit item stock issuance even when current physical balance is zero.'),
+              value: _allowNegativeStock,
+              onChanged: (val) {
+                setState(() => _allowNegativeStock = val);
+                _savePolicy('allow_negative_stock', val.toString());
+              },
+            ),
+            const Divider(),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Maker-Checker Approval Threshold'),
-              subtitle: const Text('Discounts, waivers, or refunds exceeding this limit require admin approval.'),
+              title: const Text('Auto-Lock Inactivity Timer'),
+              subtitle: const Text('Automatically lock current screen after period of inactivity.'),
+              trailing: DropdownButton<int>(
+                value: _autoLockMinutes,
+                items: const [
+                  DropdownMenuItem(value: 5, child: Text('5 Minutes')),
+                  DropdownMenuItem(value: 10, child: Text('10 Minutes')),
+                  DropdownMenuItem(value: 15, child: Text('15 Minutes')),
+                  DropdownMenuItem(value: 30, child: Text('30 Minutes')),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() => _autoLockMinutes = val);
+                    _savePolicy('auto_lock_minutes', val.toString());
+                  }
+                },
+              ),
+            ),
+            const Divider(),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Maker-Checker Approval Limit'),
+              subtitle: const Text('Discounts, waivers, refunds, and shrinkage adjustments above this require admin approval.'),
               trailing: DropdownButton<int>(
                 value: _makerCheckerThreshold,
                 items: const [
@@ -402,29 +493,139 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
   }
 
   // ---------------------------------------------------------------------------
-  // Tab 3: Backups & Recovery
+  // Tab 3: Templates & Messaging
+  // ---------------------------------------------------------------------------
+  Widget _buildTemplatesTab() {
+    return SingleChildScrollView(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 650),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Messaging & Receipt Templates', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 4),
+            const Text('Customize WhatsApp reminder messages and receipt presentation.', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+            const Divider(height: 24),
+            const Text('WhatsApp Reminder Message Template', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            const SizedBox(height: 6),
+            AppTextField(
+              controller: _waTemplateCtrl,
+              label: 'Message Template',
+              maxLines: 3,
+            ),
+            const SizedBox(height: 6),
+            const Wrap(
+              spacing: 6,
+              children: [
+                Chip(label: Text('{student}', style: TextStyle(fontSize: 11))),
+                Chip(label: Text('{amount}', style: TextStyle(fontSize: 11))),
+                Chip(label: Text('{due_date}', style: TextStyle(fontSize: 11))),
+                Chip(label: Text('{academy}', style: TextStyle(fontSize: 11))),
+              ],
+            ),
+            const Divider(height: 24),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Default Fee Receipt Format'),
+              subtitle: const Text('Preferred printing layout for generated receipts.'),
+              trailing: DropdownButton<String>(
+                value: _receiptStyle,
+                items: const [
+                  DropdownMenuItem(value: 'a4', child: Text('A4 Portrait (Standard)')),
+                  DropdownMenuItem(value: 'thermal', child: Text('Thermal 80mm Roll')),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() => _receiptStyle = val);
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            AppTextField(
+              controller: _receiptFooterCtrl,
+              label: 'Receipt Footer Note',
+              hint: 'e.g. Fee once paid is non-refundable.',
+            ),
+            const SizedBox(height: 24),
+            Align(
+              alignment: Alignment.centerRight,
+              child: PrimaryButton(
+                label: 'Save Templates',
+                isLoading: _isSavingTemplates,
+                onPressed: _saveTemplates,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tab 4: Backups & Recovery
   // ---------------------------------------------------------------------------
   Widget _buildBackupsTab() {
     final backupsAsync = ref.watch(backupsListProvider);
 
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Database Snapshots & Encrypted Backups',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-            PrimaryButton(
-              label: 'Create Backup Now',
-              icon: Icons.backup,
-              isLoading: _isBackingUp,
-              onPressed: _triggerBackup,
-            ),
-          ],
+        Container(
+          padding: const EdgeInsets.all(16),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Switch(
+                    value: _autoBackupDaily,
+                    onChanged: (val) {
+                      setState(() => _autoBackupDaily = val);
+                      _savePolicy('auto_backup_enabled', val.toString());
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Automatic Daily Backup', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(width: 24),
+                  const Text('Retention: Keep Last', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  const SizedBox(width: 8),
+                  DropdownButton<int>(
+                    value: _backupRetention,
+                    items: const [
+                      DropdownMenuItem(value: 7, child: Text('7 Backups')),
+                      DropdownMenuItem(value: 14, child: Text('14 Backups')),
+                      DropdownMenuItem(value: 30, child: Text('30 Backups')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => _backupRetention = val);
+                        _savePolicy('backup_retention_count', val.toString());
+                      }
+                    },
+                  ),
+                ],
+              ),
+              PrimaryButton(
+                label: 'Create Backup Now',
+                icon: Icons.backup,
+                isLoading: _isBackingUp,
+                onPressed: _triggerBackup,
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
         Expanded(
           child: Container(
             decoration: BoxDecoration(
@@ -446,7 +647,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                       DataColumn(label: Text('Timestamp', style: TextStyle(fontWeight: FontWeight.bold))),
                       DataColumn(label: Text('Type', style: TextStyle(fontWeight: FontWeight.bold))),
                       DataColumn(label: Text('Size', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Checksum (SHA-256)', style: TextStyle(fontWeight: FontWeight.bold))),
+                      DataColumn(label: Text('Checksum', style: TextStyle(fontWeight: FontWeight.bold))),
                       DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
                       DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
                     ],
@@ -456,7 +657,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                           DataCell(Text('${b.createdAt.day}/${b.createdAt.month}/${b.createdAt.year} ${b.createdAt.hour}:${b.createdAt.minute.toString().padLeft(2, '0')}')),
                           DataCell(Text(b.type.toUpperCase())),
                           DataCell(Text('${(b.sizeBytes / 1024).toStringAsFixed(1)} KB')),
-                          DataCell(Text(b.checksum.substring(0, 12) + '...', style: const TextStyle(fontFamily: 'monospace'))),
+                          DataCell(Text(b.checksum.substring(0, 10) + '...', style: const TextStyle(fontFamily: 'monospace'))),
                           DataCell(StatusBadge(
                             label: b.isVerified ? 'VERIFIED' : 'PENDING CHECK',
                             type: b.isVerified ? StatusBadgeType.paid : StatusBadgeType.pending,
@@ -481,7 +682,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                                     }
                                   },
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 4),
+                                TextButton(
+                                  child: const Text('Test Restore', style: TextStyle(color: Colors.blueAccent)),
+                                  onPressed: () async {
+                                    final scheduler = ref.read(backupSchedulerServiceProvider);
+                                    final res = await scheduler.testRestoreBackup(b.id);
+                                    if (mounted) {
+                                      res.fold(
+                                        onSuccess: (tr) => ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Test restore passed: ${tr.recordsCount} student records verified in isolated sandbox.'),
+                                            backgroundColor: Colors.teal,
+                                          ),
+                                        ),
+                                        onFailure: (f) => ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Test restore error: ${f.message}'), backgroundColor: Colors.red),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                                const SizedBox(width: 4),
                                 TextButton(
                                   child: const Text('Restore', style: TextStyle(color: Colors.redAccent)),
                                   onPressed: () => _confirmRestore(b.id),
@@ -547,7 +769,117 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
   }
 
   // ---------------------------------------------------------------------------
-  // Tab 4: Display & Preferences
+  // Tab 5: Licensing & Activation
+  // ---------------------------------------------------------------------------
+  Widget _buildLicensingTab() {
+    final licenseAsync = ref.watch(licenseInfoProvider);
+
+    return SingleChildScrollView(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 650),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: licenseAsync.when(
+          data: (info) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('ClassKhata Offline Licensing', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    StatusBadge(
+                      label: info.status.name.toUpperCase(),
+                      type: info.isActivated ? StatusBadgeType.paid : (info.isReadonly ? StatusBadgeType.cancelled : StatusBadgeType.pending),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                const Text('Fully offline RSA-2048 cryptographically verified license.', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                const Divider(height: 24),
+
+                // Machine ID container
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.inputFill,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.computer, size: 22, color: AppColors.heading),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Hardware Machine ID:', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                            SelectableText(
+                              info.machineId,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.copy, size: 14),
+                        label: const Text('Copy'),
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: info.machineId));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Machine ID copied to clipboard.')),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('License Status'),
+                  subtitle: Text(
+                    info.isActivated
+                        ? 'Lifetime Permanent License Active (${info.academyName ?? "Registered"})'
+                        : (info.isReadonly ? 'Trial Expired — System in Read-Only mode' : 'Free Trial: ${info.daysRemaining} days remaining'),
+                  ),
+                  trailing: info.isActivated
+                      ? const Icon(Icons.check_circle, color: AppColors.accent, size: 28)
+                      : null,
+                ),
+                const Divider(),
+
+                if (!info.isActivated) ...[
+                  const SizedBox(height: 12),
+                  PrimaryButton(
+                    label: 'Activate Lifetime License',
+                    icon: Icons.vpn_key,
+                    onPressed: () {
+                      showDialog<bool>(
+                        context: context,
+                        builder: (_) => ActivationDialog(machineId: info.machineId),
+                      );
+                    },
+                  ),
+                ],
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Text('Error loading license: $err', style: const TextStyle(color: Colors.red)),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tab 6: Display & Preferences
   // ---------------------------------------------------------------------------
   Widget _buildPreferencesTab() {
     final locale = ref.watch(localeNotifierProvider);
@@ -555,7 +887,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
 
     return SingleChildScrollView(
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 600),
+        constraints: const BoxConstraints(maxWidth: 650),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: AppColors.surface,

@@ -14,6 +14,8 @@ import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../domain/entities/report_entities.dart';
 import '../providers/reports_providers.dart';
 
+import '../../../settings/presentation/providers/settings_providers.dart';
+
 class ReportsPage extends ConsumerStatefulWidget {
   const ReportsPage({super.key});
 
@@ -26,18 +28,21 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   String? _statusMessage;
   bool _isError = false;
 
-  Future<void> _exportPdf(ReportData data) async {
+  Future<void> _exportPdf(ReportData data, {bool isThermal = false}) async {
     setState(() {
       _isExporting = true;
       _statusMessage = null;
     });
 
     final currentUser = ref.read(authSessionNotifierProvider);
+    final academy = ref.read(academyProfileProvider).valueOrNull;
     final pdfUseCase = ref.read(exportPdfUseCaseProvider);
 
     final res = await pdfUseCase(
       userPermissions: currentUser?.permissions ?? {Permission.reportsExport},
       data: data,
+      academyName: academy?.name ?? 'ClassKhata Academy',
+      isThermal: isThermal,
     );
 
     if (!mounted) return;
@@ -47,7 +52,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       onSuccess: (bytes) async {
         await Printing.layoutPdf(
           onLayout: (_) async => Uint8List.fromList(bytes),
-          name: '${data.type.name}_report',
+          name: '${data.type.name}_${isThermal ? 'thermal' : 'a4'}',
         );
       },
       onFailure: (f) async {
@@ -152,8 +157,14 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     children: [
                       OutlinedButton.icon(
                         icon: const Icon(Icons.picture_as_pdf, size: 16, color: Colors.redAccent),
-                        label: const Text('Print / PDF'),
-                        onPressed: _isExporting ? null : () => _exportPdf(data),
+                        label: const Text('Print A4 (PDF)'),
+                        onPressed: _isExporting ? null : () => _exportPdf(data, isThermal: false),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.receipt_long, size: 16, color: AppColors.accent),
+                        label: const Text('Thermal (80mm)'),
+                        onPressed: _isExporting ? null : () => _exportPdf(data, isThermal: true),
                       ),
                       const SizedBox(width: 12),
                       PrimaryButton(

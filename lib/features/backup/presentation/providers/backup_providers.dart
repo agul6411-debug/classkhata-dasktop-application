@@ -43,3 +43,9 @@ final verifyAuditLogProvider = FutureProvider<Result<bool>>((ref) async {
 
   return verifyAuditChain(entries);
 });
+
+final backupSchedulerServiceProvider = Provider<BackupSchedulerService>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  final repo = ref.watch(backupRepositoryProvider);
+  return BackupSchedulerService(db, repo);
+});
