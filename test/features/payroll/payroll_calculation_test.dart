@@ -22,6 +22,44 @@ void main() {
       expect(structure.netSalary.inRupees, 38000.0);
     });
 
+    test('CalculateSalaryEngine computes per-class and per-hour base salaries', () {
+      // 1. Per-class: Rs 1,500 per class * 20 classes = Rs 30,000
+      final perClassSalary = CalculateSalaryEngine.calculateBaseSalary(
+        structureType: 'per_class',
+        rate: Money.fromRupees(1500),
+        units: 20,
+      );
+      expect(perClassSalary.inRupees, equals(30000.0));
+
+      // 2. Per-hour: Rs 800 per hour * 45 hours = Rs 36,000
+      final perHourSalary = CalculateSalaryEngine.calculateBaseSalary(
+        structureType: 'per_hour',
+        rate: Money.fromRupees(800),
+        units: 45,
+      );
+      expect(perHourSalary.inRupees, equals(36000.0));
+
+      // 3. Fixed: returns base rate
+      final fixedSalary = CalculateSalaryEngine.calculateBaseSalary(
+        structureType: 'fixed',
+        rate: Money.fromRupees(50000),
+      );
+      expect(fixedSalary.inRupees, equals(50000.0));
+    });
+
+    test('CalculateSalaryEngine computes attendance-based deductions accurately', () {
+      // Base salary: Rs 30,000 for 30 working days = Rs 1,000 per day
+      // 2 absent days (Rs 2,000) + 1 half day (Rs 500) = Rs 2,500 deduction
+      final deduction = CalculateSalaryEngine.calculateAttendanceDeduction(
+        baseSalary: Money.fromRupees(30000),
+        workingDays: 30,
+        absentDays: 2,
+        halfDays: 1,
+      );
+      expect(deduction.inRupees, equals(2500.0));
+      expect(deduction.paisa, equals(250000));
+    });
+
     test('CalculateSalaryEngine computes net pay factoring advance recovery', () {
       final base = Money.fromRupees(50000);
       final allowances = Money.fromRupees(10000);

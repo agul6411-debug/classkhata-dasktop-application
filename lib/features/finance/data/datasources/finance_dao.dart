@@ -106,6 +106,16 @@ class FinanceDao {
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
+      // Check if day is already closed and locked
+      final existingClosing = await (_db.select(_db.dayClosingsTable)
+            ..where((t) =>
+                t.closingDate.isBiggerOrEqualValue(startOfDay) &
+                t.closingDate.isSmallerOrEqualValue(endOfDay)))
+          .getSingleOrNull();
+      if (existingClosing != null) {
+        throw StateError('This day has already been closed and locked.');
+      }
+
       // 1. Calculate Day's Cash Receipts (Inflows)
       final inflows = await (_db.select(_db.cashBookEntriesTable)
             ..where((t) =>

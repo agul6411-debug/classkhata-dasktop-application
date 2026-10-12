@@ -156,6 +156,27 @@ class FeeRepositoryImpl implements FeeRepository {
   }
 
   @override
+  Future<Result<void>> reviewFeeApproval({
+    required int requestId,
+    required int reviewerId,
+    required bool approve,
+    String? reviewerNote,
+  }) async {
+    try {
+      await _dao.reviewApprovalRequest(
+        requestId: requestId,
+        reviewerId: reviewerId,
+        approve: approve,
+        reviewerNote: reviewerNote,
+      );
+      return const Success(null);
+    } catch (e, st) {
+      await AppLogger.instance.error('reviewFeeApproval error', error: e, stack: st);
+      return Failure(DatabaseFailure('Could not review approval request.', technicalDetail: e.toString()));
+    }
+  }
+
+  @override
   Future<Result<List<DefaulterAgingRecord>>> getDefaulterAgingReport({int? batchId}) async {
     try {
       final report = await _dao.getDefaulterAgingReport(batchId: batchId);

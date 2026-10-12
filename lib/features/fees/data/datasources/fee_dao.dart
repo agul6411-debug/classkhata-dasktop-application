@@ -397,4 +397,30 @@ class FeeDao {
           ),
         );
   }
+
+  Future<void> reviewApprovalRequest({
+    required int requestId,
+    required int reviewerId,
+    required bool approve,
+    String? reviewerNote,
+  }) async {
+    await _db.transaction(() async {
+      await (_db.update(_db.approvalRequestsTable)..where((t) => t.id.equals(requestId))).write(
+        ApprovalRequestsTableCompanion(
+          status: Value(approve ? 'approved' : 'rejected'),
+          reviewedBy: Value(reviewerId),
+          reviewedAt: Value(DateTime.now()),
+          reviewerNote: Value(reviewerNote),
+        ),
+      );
+      await _writeAuditEntry(
+        action: approve ? 'approval.approved' : 'approval.rejected',
+        entityType: 'ApprovalRequest',
+        entityId: requestId.toString(),
+        userId: reviewerId,
+        details:
+            'Approval request #$requestId ${approve ? "approved" : "rejected"} by user #$reviewerId. Note: $reviewerNote',
+      );
+    });
+  }
 }

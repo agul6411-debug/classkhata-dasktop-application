@@ -39,6 +39,10 @@ class ReportsRepositoryImpl implements ReportsRepository {
           return Success(await _buildPayrollRegister(filter, now));
         case ReportType.inventoryValuation:
           return Success(await _buildInventoryValuation(filter, now));
+        case ReportType.inventoryMovements:
+          return Success(await _buildInventoryMovements(filter, now));
+        case ReportType.supplierLedger:
+          return Success(await _buildSupplierLedger(filter, now));
         case ReportType.studentEnrollment:
           return Success(await _buildStudentEnrollment(filter, now));
       }
@@ -416,7 +420,134 @@ class ReportsRepositoryImpl implements ReportsRepository {
   }
 
   // ---------------------------------------------------------------------------
-  // 7. Student Enrollment Directory
+  // 7. Inventory Movements History
+  // ---------------------------------------------------------------------------
+  Future<ReportData> _buildInventoryMovements(ReportFilter filter, DateTime now) async {
+    final start = DateTime(filter.startDate.year, filter.startDate.month, filter.startDate.day);
+    final end = DateTime(filter.endDate.year, filter.endDate.month, filter.endDate.day, 23, 59, 59);
+
+    final movements = await (_db.select(_db.inventoryMovementsTable)
+          ..where((t) =>
+              t.movementDate.isBiggerOrEqualValue(start) &
+              t.movementDate.isSmallerOrEqualValue(end))
+          ..orderBy([(t) => OrderingTerm.desc(t.movementDate)]))
+        .get();
+
+    final items = await _db.select(_db.inventoryItemsTable).get();
+    final itemMap = {for (var i in items) i.id: i.name};
+
+    int totalIn = 0;
+    int totalOut = 0;
+    final rows = <List<String>>[];
+
+    for (final m in movements) {
+      if (m.movementType == 'in') {
+        totalIn += m.quantity;
+      } else if (m.movementType == 'out') {
+        totalOut += m.quantity;
+      }
+
+      rows.add([
+        '${m.movementDate.day}/${m.movementDate.month}/${m.movementDate.year}',
+        itemMap[m.itemId] ?? 'Item #${m.itemId}',
+        m.movementType.toUpperCase(),
+        '${m.quantity}',
+        Money.fromPaisa(m.unitCostPaisa).format(),
+        m.reason,
+        m.referenceNumber ?? '-',
+      ]);
+    }
+
+    return ReportData(
+      type: filter.reportType,
+      title: 'Inventory Movement History',
+      subtitle: 'Stock flow from ${start.day}/${start.month}/${start.year} to ${end.day}/${end.month}/${end.year}',
+      headers: const [
+        'Date',
+        'Item Name',
+        'Movement Type',
+        'Quantity',
+        'Unit Cost',
+        'Reason / Notes',
+        'Reference #',
+      ],
+      rows: rows,
+      summaryMetrics: {
+        'Total Received (In)': '$totalIn units',
+        'Total Issued (Out)': '$totalOut units',
+        'Total Movements': '${movements.length}',
+      },
+      generatedAt: now,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 8. Supplier Ledger & Payables
+  // ---------------------------------------------------------------------------
+  Future<ReportData> _buildSupplierLedger(ReportFilter filter, DateTime now) async {
+    final start = DateTime(filter.startDate.year, filter.startDate.month, filter.startDate.day);
+    final end = DateTime(filter.endDate.year, filter.endDate.month, filter.endDate.day, 23, 59, 59);
+
+    final ledgerRows = await (_db.select(_db.supplierLedgerTable)
+          ..where((t) =>
+              t.transactionDate.isBiggerOrEqualValue(start) &
+              t.transactionDate.isSmallerOrEqualValue(end))
+          ..orderBy([(t) => OrderingTerm.desc(t.transactionDate)]))
+        .get();
+
+    final suppliers = await _db.select(_db.suppliersTable).get();
+    final supMap = {for (var s in suppliers) s.id: s.name};
+
+    int totalPurchasesPaisa = 0;
+    int totalPaymentsPaisa = 0;
+    final rows = <List<String>>[];
+
+    for (final l in ledgerRows) {
+      if (l.transactionType == 'purchase') {
+        totalPurchasesPaisa += l.amountPaisa;
+      } else if (l.transactionType == 'payment') {
+        totalPaymentsPaisa += l.amountPaisa;
+      }
+
+      rows.add([
+        '${l.transactionDate.day}/${l.transactionDate.month}/${l.transactionDate.year}',
+        supMap[l.supplierId] ?? 'Supplier #${l.supplierId}',
+        l.transactionType.toUpperCase(),
+        Money.fromPaisa(l.amountPaisa).format(),
+        l.referenceNumber ?? '-',
+        l.notes ?? '-',
+      ]);
+    }
+
+    int totalOutstandingBalancePaisa = 0;
+    for (final s in suppliers) {
+      totalOutstandingBalancePaisa += s.currentBalancePaisa;
+    }
+
+    return ReportData(
+      type: filter.reportType,
+      title: 'Supplier Ledger & Payables Report',
+      subtitle: 'Supplier ledger transactions from ${start.day}/${start.month}/${start.year} to ${end.day}/${end.month}/${end.year}',
+      headers: const [
+        'Date',
+        'Supplier Name',
+        'Transaction',
+        'Amount',
+        'Reference #',
+        'Notes',
+      ],
+      rows: rows,
+      summaryMetrics: {
+        'Total Purchases': Money.fromPaisa(totalPurchasesPaisa).format(),
+        'Total Payments Made': Money.fromPaisa(totalPaymentsPaisa).format(),
+        'Outstanding Payables': Money.fromPaisa(totalOutstandingBalancePaisa).format(),
+      },
+      generatedAt: now,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 9. Student Enrollment Directory
   // ---------------------------------------------------------------------------
   Future<ReportData> _buildStudentEnrollment(ReportFilter filter, DateTime now) async {
     final students = await (_db.select(_db.studentsTable)..orderBy([(t) => OrderingTerm.asc(t.name)])).get();

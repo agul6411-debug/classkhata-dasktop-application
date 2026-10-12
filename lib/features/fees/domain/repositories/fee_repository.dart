@@ -49,6 +49,13 @@ abstract interface class FeeRepository {
     required int requestedBy,
   });
 
+  Future<Result<void>> reviewFeeApproval({
+    required int requestId,
+    required int reviewerId,
+    required bool approve,
+    String? reviewerNote,
+  });
+
   // Defaulter Aging
   Future<Result<List<DefaulterAgingRecord>>> getDefaulterAgingReport({int? batchId});
 

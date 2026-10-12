@@ -63,6 +63,43 @@ class FeeApprovalsUseCase {
       requestedBy: requestedBy,
     );
   }
+
+  /// Reviews an approval request (Checker phase).
+  /// Enforces:
+  /// 1. The reviewer has approvalsApprove / approvalsReject permission.
+  /// 2. Maker-checker rule: A user CANNOT approve their own request!
+  Future<Result<void>> reviewAdjustment({
+    required Set<Permission> userPermissions,
+    required int requestId,
+    required int requestedBy,
+    required int reviewerId,
+    required bool approve,
+    String? reviewerNote,
+  }) async {
+    final requiredPerm =
+        approve ? Permission.approvalsApprove : Permission.approvalsReject;
+    final permCheck = checkPermission(
+      userPermissions: userPermissions,
+      required: requiredPerm,
+    );
+    if (permCheck.isFailure) {
+      return Failure(permCheck.fold(
+          onSuccess: (_) => const UnexpectedFailure(''), onFailure: (f) => f));
+    }
+
+    // Maker cannot be checker
+    if (requestedBy == reviewerId) {
+      return const Failure(ValidationFailure(
+          'A user cannot approve their own request (maker-checker violation).'));
+    }
+
+    return _repository.reviewFeeApproval(
+      requestId: requestId,
+      reviewerId: reviewerId,
+      approve: approve,
+      reviewerNote: reviewerNote,
+    );
+  }
 }
 
 class DefaulterAgingUseCase {

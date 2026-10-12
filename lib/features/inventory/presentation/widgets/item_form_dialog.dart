@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/money/money.dart';
+import '../../../../core/security/permission_service.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
@@ -23,6 +24,7 @@ class _ItemFormDialogState extends ConsumerState<ItemFormDialog> {
   final _unitCtrl = TextEditingController(text: 'pcs');
   final _qtyCtrl = TextEditingController(text: '0');
   final _costCtrl = TextEditingController(text: '0');
+  final _saleCtrl = TextEditingController(text: '0');
   final _reorderCtrl = TextEditingController(text: '5');
   int? _selectedCategoryId;
   bool _isLoading = false;
@@ -34,6 +36,7 @@ class _ItemFormDialogState extends ConsumerState<ItemFormDialog> {
     _unitCtrl.dispose();
     _qtyCtrl.dispose();
     _costCtrl.dispose();
+    _saleCtrl.dispose();
     _reorderCtrl.dispose();
     super.dispose();
   }
@@ -47,6 +50,7 @@ class _ItemFormDialogState extends ConsumerState<ItemFormDialog> {
 
     final initialQty = int.tryParse(_qtyCtrl.text.trim()) ?? 0;
     final costRupees = double.tryParse(_costCtrl.text.trim()) ?? 0;
+    final saleRupees = double.tryParse(_saleCtrl.text.trim()) ?? 0;
     final reorderLevel = int.tryParse(_reorderCtrl.text.trim()) ?? 5;
 
     setState(() {
@@ -55,14 +59,18 @@ class _ItemFormDialogState extends ConsumerState<ItemFormDialog> {
     });
 
     final currentUser = ref.read(authSessionNotifierProvider);
+    final userPermissions = currentUser?.permissions ?? Permission.values.toSet();
+
     final useCase = ref.read(createInventoryItemUseCaseProvider);
 
     final res = await useCase(
+      userPermissions: userPermissions,
       categoryId: _selectedCategoryId ?? 1,
       name: name,
       unit: _unitCtrl.text.trim().isEmpty ? 'pcs' : _unitCtrl.text.trim(),
       initialQuantity: initialQty,
       unitCost: Money.fromRupees(costRupees),
+      sellingPrice: Money.fromRupees(saleRupees),
       reorderLevel: reorderLevel,
       createdBy: currentUser?.id ?? 1,
     );
@@ -72,6 +80,8 @@ class _ItemFormDialogState extends ConsumerState<ItemFormDialog> {
     res.fold(
       onSuccess: (_) {
         ref.invalidate(inventoryItemsProvider);
+        ref.invalidate(stockValuationProvider);
+        ref.invalidate(lowStockAlertsProvider);
         Navigator.of(context).pop(true);
       },
       onFailure: (f) => setState(() {
@@ -89,88 +99,127 @@ class _ItemFormDialogState extends ConsumerState<ItemFormDialog> {
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 500),
+        constraints: const BoxConstraints(maxWidth: 520),
         child: Padding(
-          padding: const EdgeInsets.all(28),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Add Inventory Item',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Add Inventory Item',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.heading),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => Navigator.of(context).pop(false),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              const Divider(),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+
               if (_errorMessage != null) ...[
                 ErrorBanner(message: _errorMessage!),
                 const SizedBox(height: 12),
               ],
+
+              // Category Selector
               categoriesAsync.when(
-                data: (cats) {
-                  return DropdownButtonFormField<int>(
-                    value: _selectedCategoryId ?? (cats.isNotEmpty ? cats.first.id : null),
-                    decoration: const InputDecoration(labelText: 'Category *'),
-                    items: cats.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                    onChanged: (val) => setState(() => _selectedCategoryId = val),
-                  );
-                },
+                data: (categories) => DropdownButtonFormField<int>(
+                  initialValue: _selectedCategoryId ?? (categories.isNotEmpty ? categories.first.id : null),
+                  decoration: const InputDecoration(
+                    labelText: 'Category *',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: categories
+                      .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+                      .toList(),
+                  onChanged: (id) => setState(() => _selectedCategoryId = id),
+                ),
                 loading: () => const LinearProgressIndicator(),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (err, _) => Text('Failed to load categories: $err'),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
+
+              // Item Name
               AppTextField(
                 controller: _nameCtrl,
-                label: 'Item Name / Description *',
-                autofocus: true,
+                label: 'Item Name *',
+                hint: 'e.g. Mathematics Textbook 9th, Blue Ballpoint Pen',
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
+
+              // Unit of Measure & Initial Quantity
               Row(
                 children: [
                   Expanded(
                     child: AppTextField(
                       controller: _unitCtrl,
-                      label: 'Unit of Measure (e.g. pcs, box, pack)',
+                      label: 'Unit of Measure *',
+                      hint: 'pcs, box, pack, ream',
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: AppTextField(
                       controller: _qtyCtrl,
-                      label: 'Initial Stock Count',
+                      label: 'Opening Stock Count',
                       keyboardType: TextInputType.number,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
+
+              // Unit Cost & Selling Price
               Row(
                 children: [
                   Expanded(
                     child: AppTextField(
                       controller: _costCtrl,
-                      label: 'Unit Cost (Rs.)',
+                      label: 'Purchase Cost (PKR) *',
                       keyboardType: TextInputType.number,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: AppTextField(
-                      controller: _reorderCtrl,
-                      label: 'Reorder Alert Level',
+                      controller: _saleCtrl,
+                      label: 'Selling Price (PKR)',
+                      hint: 'Optional charge rate',
                       keyboardType: TextInputType.number,
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 14),
+
+              // Low-Stock Threshold
+              AppTextField(
+                controller: _reorderCtrl,
+                label: 'Low-Stock Alert Level',
+                hint: 'Threshold count for dashboard alert (default 5)',
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 24),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel'),
+                  ),
                   const SizedBox(width: 12),
-                  PrimaryButton(label: 'Save Item', isLoading: _isLoading, onPressed: _submit),
+                  PrimaryButton(
+                    label: 'Save Item',
+                    icon: Icons.check,
+                    isLoading: _isLoading,
+                    onPressed: _submit,
+                  ),
                 ],
               ),
             ],

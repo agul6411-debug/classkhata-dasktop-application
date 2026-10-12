@@ -1,45 +1,31 @@
-/// Physical Stock-Take & Shrinkage Reconciliation Dialog.
+/// Stock-Take Physical Reconciliation Modal Dialog (Strictly NO Barcodes).
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../../../core/security/permission_service.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
-import '../../domain/entities/inventory_entities.dart';
 import '../providers/inventory_providers.dart';
 
 class StockReconcileDialog extends ConsumerStatefulWidget {
-  final InventoryItem? preselectedItem;
-
-  const StockReconcileDialog({
-    super.key,
-    this.preselectedItem,
-  });
+  const StockReconcileDialog({super.key});
 
   @override
   ConsumerState<StockReconcileDialog> createState() => _StockReconcileDialogState();
 }
 
 class _StockReconcileDialogState extends ConsumerState<StockReconcileDialog> {
-  int? _selectedItemId;
-  int _recordedQty = 0;
   final _actualQtyCtrl = TextEditingController();
   final _reasonCtrl = TextEditingController();
+  int? _selectedItemId;
+  int _currentRecordedQty = 0;
   bool _isLoading = false;
   String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.preselectedItem != null) {
-      _selectedItemId = widget.preselectedItem!.id;
-      _recordedQty = widget.preselectedItem!.quantityOnHand;
-      _actualQtyCtrl.text = _recordedQty.toString();
-    }
-  }
+  String? _successNotice;
 
   @override
   void dispose() {
@@ -63,12 +49,16 @@ class _StockReconcileDialogState extends ConsumerState<StockReconcileDialog> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _successNotice = null;
     });
 
     final currentUser = ref.read(authSessionNotifierProvider);
+    final userPermissions = currentUser?.permissions ?? Permission.values.toSet();
+
     final useCase = ref.read(stockReconciliationUseCaseProvider);
 
     final res = await useCase(
+      userPermissions: userPermissions,
       itemId: _selectedItemId!,
       actualQuantity: actualQty,
       reason: _reasonCtrl.text.trim().isEmpty ? null : _reasonCtrl.text.trim(),
@@ -78,9 +68,20 @@ class _StockReconcileDialogState extends ConsumerState<StockReconcileDialog> {
     if (!mounted) return;
 
     res.fold(
-      onSuccess: (_) {
+      onSuccess: (data) {
         ref.invalidate(inventoryItemsProvider);
-        Navigator.of(context).pop(true);
+        ref.invalidate(inventoryMovementsProvider);
+        ref.invalidate(stockValuationProvider);
+
+        if (data.requiresApproval) {
+          setState(() {
+            _isLoading = false;
+            _successNotice =
+                'Discrepancy exceeds threshold. An approval request (#${data.approvalId}) has been escalated to the Maker-Checker queue.';
+          });
+        } else {
+          Navigator.of(context).pop(true);
+        }
       },
       onFailure: (f) => setState(() {
         _isLoading = false;
@@ -92,117 +93,174 @@ class _StockReconcileDialogState extends ConsumerState<StockReconcileDialog> {
   @override
   Widget build(BuildContext context) {
     final itemsAsync = ref.watch(inventoryItemsProvider);
-    final actualVal = int.tryParse(_actualQtyCtrl.text.trim()) ?? _recordedQty;
-    final discrepancy = actualVal - _recordedQty;
+
+    final actualParsed = int.tryParse(_actualQtyCtrl.text.trim());
+    final discrepancy = actualParsed != null ? actualParsed - _currentRecordedQty : 0;
 
     return Dialog(
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
+        constraints: const BoxConstraints(maxWidth: 520),
         child: Padding(
-          padding: const EdgeInsets.all(28),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Stock-Take Reconciliation',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Physical Stock-Take Audit',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.heading),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => Navigator.of(context).pop(false),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               const Text(
-                'Reconcile physical stock count against the system record to track shrinkage or surplus.',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                'Enter actual physical count. Variances are posted as audit adjustments. Large discrepancies require Maker-Checker sign-off.',
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
               ),
-              const Divider(height: 20),
+              const SizedBox(height: 16),
+
               if (_errorMessage != null) ...[
                 ErrorBanner(message: _errorMessage!),
                 const SizedBox(height: 12),
               ],
-              if (widget.preselectedItem != null)
-                Text(
-                  'Item: ${widget.preselectedItem!.name}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                )
-              else
-                itemsAsync.when(
-                  data: (items) {
-                    return DropdownButtonFormField<int>(
-                      value: _selectedItemId ?? (items.isNotEmpty ? items.first.id : null),
-                      decoration: const InputDecoration(labelText: 'Select Item to Count *'),
-                      items: items
-                          .map((i) => DropdownMenuItem(value: i.id, child: Text('${i.name} (Sys: ${i.quantityOnHand})')))
-                          .toList(),
-                      onChanged: (val) {
-                        setState(() {
-                          _selectedItemId = val;
-                          final match = items.firstWhere((i) => i.id == val);
-                          _recordedQty = match.quantityOnHand;
-                          _actualQtyCtrl.text = _recordedQty.toString();
-                        });
-                      },
-                    );
-                  },
-                  loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Column(
-                      children: [
-                        const Text('System Record', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                        const SizedBox(height: 4),
-                        Text('$_recordedQty', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const Icon(Icons.arrow_forward, color: AppColors.textMuted, size: 16),
-                    Column(
-                      children: [
-                        const Text('Variance / Shrinkage', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                        const SizedBox(height: 4),
-                        Text(
-                          discrepancy > 0 ? '+$discrepancy (Surplus)' : discrepancy < 0 ? '$discrepancy (Loss)' : '0 (Exact)',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: discrepancy < 0 ? Colors.red : discrepancy > 0 ? Colors.green : AppColors.textPrimary,
-                          ),
+              if (_successNotice != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _successNotice!,
+                          style: TextStyle(fontSize: 13, color: Colors.amber.shade900),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(height: 12),
+              ],
+
+              // Item Selector
+              itemsAsync.when(
+                data: (items) => DropdownButtonFormField<int>(
+                  initialValue: _selectedItemId,
+                  decoration: const InputDecoration(
+                    labelText: 'Select Inventory Item *',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: items
+                      .map((i) => DropdownMenuItem(
+                            value: i.id,
+                            child: Text('${i.name} (Recorded: ${i.quantityOnHand} ${i.unit})'),
+                          ))
+                      .toList(),
+                  onChanged: (id) {
+                    if (id == null) return;
+                    final it = items.firstWhere((x) => x.id == id);
+                    setState(() {
+                      _selectedItemId = id;
+                      _currentRecordedQty = it.quantityOnHand;
+                      _actualQtyCtrl.text = it.quantityOnHand.toString();
+                    });
+                  },
+                ),
+                loading: () => const LinearProgressIndicator(),
+                error: (err, _) => Text('Failed to load items: $err'),
               ),
               const SizedBox(height: 16),
-              AppTextField(
-                controller: _actualQtyCtrl,
-                label: 'Actual Counted Quantity *',
-                keyboardType: TextInputType.number,
-                autofocus: true,
-                onChanged: (_) => setState(() {}),
+
+              // Count Entry & Discrepancy Display
+              Row(
+                children: [
+                  Expanded(
+                    child: AppTextField(
+                      controller: _actualQtyCtrl,
+                      label: 'Actual Physical Count *',
+                      keyboardType: TextInputType.number,
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: discrepancy == 0
+                            ? AppColors.inputFill
+                            : discrepancy < 0
+                                ? Colors.red.shade50
+                                : Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: discrepancy == 0
+                              ? AppColors.border
+                              : discrepancy < 0
+                                  ? Colors.red.shade300
+                                  : Colors.green.shade300,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Variance / Shrinkage', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                          const SizedBox(height: 4),
+                          Text(
+                            discrepancy > 0 ? '+$discrepancy (Surplus)' : '$discrepancy (Deficit)',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: discrepancy == 0
+                                  ? AppColors.textPrimary
+                                  : discrepancy < 0
+                                      ? Colors.red.shade700
+                                      : Colors.green.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+
               AppTextField(
                 controller: _reasonCtrl,
-                label: 'Reconciliation Reason / Note (e.g. Monthly stock audit)',
+                label: 'Audit Reason / Shrinkage Notes',
+                hint: 'e.g., Annual physical audit, damaged in store, breakage',
               ),
               const SizedBox(height: 24),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel'),
+                  ),
                   const SizedBox(width: 12),
-                  PrimaryButton(label: 'Reconcile Count', isLoading: _isLoading, onPressed: _submit),
+                  PrimaryButton(
+                    label: 'Post Reconciliation',
+                    icon: Icons.check,
+                    isLoading: _isLoading,
+                    onPressed: _submit,
+                  ),
                 ],
               ),
             ],

@@ -10,6 +10,8 @@ enum ReportType {
   profitLossSummary,
   payrollRegister,
   inventoryValuation,
+  inventoryMovements,
+  supplierLedger,
   studentEnrollment;
 
   String get displayName => switch (this) {
@@ -19,6 +21,8 @@ enum ReportType {
         ReportType.profitLossSummary => 'Profit & Loss Statement',
         ReportType.payrollRegister => 'Monthly Payroll Register',
         ReportType.inventoryValuation => 'Inventory Stock & Asset Valuation',
+        ReportType.inventoryMovements => 'Inventory Movement History',
+        ReportType.supplierLedger => 'Supplier Ledger & Payables',
         ReportType.studentEnrollment => 'Student Enrollment & Strength',
       };
 
@@ -29,6 +33,8 @@ enum ReportType {
         ReportType.profitLossSummary => 'Total fee income vs operational expenses with profit margins.',
         ReportType.payrollRegister => 'Staff salary disbursements, allowances, deductions, and advances.',
         ReportType.inventoryValuation => 'On-hand quantities, reorder levels, unit costs, and total values.',
+        ReportType.inventoryMovements => 'Chronological audit of stock in, stock out, and adjustment movements.',
+        ReportType.supplierLedger => 'Supplier purchases, payments made, and current payable balances.',
         ReportType.studentEnrollment => 'Complete directory of enrolled students and batch allocations.',
       };
 }

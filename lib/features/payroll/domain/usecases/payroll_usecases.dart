@@ -10,6 +10,38 @@ import '../repositories/payroll_repository.dart';
 class CalculateSalaryEngine {
   CalculateSalaryEngine._();
 
+  /// Computes base earnings depending on structure type ('fixed', 'per_class', 'per_hour').
+  static Money calculateBaseSalary({
+    required String structureType,
+    required Money rate,
+    int units = 0,
+  }) {
+    switch (structureType) {
+      case 'per_class':
+      case 'per_hour':
+        return rate * units;
+      case 'fixed':
+      default:
+        return rate;
+    }
+  }
+
+  /// Computes deduction based on unexcused absences and half-days.
+  static Money calculateAttendanceDeduction({
+    required Money baseSalary,
+    required int workingDays,
+    required int absentDays,
+    int halfDays = 0,
+  }) {
+    if (workingDays <= 0 || (absentDays <= 0 && halfDays <= 0)) {
+      return const Money(0);
+    }
+    final dailyRatePaisa = baseSalary.paisa ~/ workingDays;
+    final totalDeductionPaisa =
+        (absentDays * dailyRatePaisa) + (halfDays * (dailyRatePaisa ~/ 2));
+    return Money.fromPaisa(totalDeductionPaisa);
+  }
+
   /// Calculates net payable salary: (base + allowances) - deductions - advanceRecovery.
   static Money calculateNetSalary({
     required Money baseSalary,

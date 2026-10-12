@@ -97,6 +97,14 @@ class MockFeeRepository implements FeeRepository {
   @override
   Future<Result<List<FeeVoucher>>> getVouchers({int? batchId, int? studentId, VoucherStatus? status, String? monthYear}) async =>
       const Success([]);
+  @override
+  Future<Result<void>> reviewFeeApproval({
+    required int requestId,
+    required int reviewerId,
+    required bool approve,
+    String? reviewerNote,
+  }) async =>
+      const Success(null);
 }
 
 void main() {
@@ -180,6 +188,58 @@ void main() {
       );
 
       expect(resValid.isSuccess, true);
+    });
+
+    test('FeeApprovalsUseCase rejects self-approval (maker cannot be checker)', () async {
+      final adminPerms = permissionsForRole(AppRole.admin);
+
+      final selfApproval = await approvalsUseCase.reviewAdjustment(
+        userPermissions: adminPerms,
+        requestId: 1,
+        requestedBy: 2, // Maker is user #2
+        reviewerId: 2,  // Checker is also user #2 (VIOLATION)
+        approve: true,
+        reviewerNote: 'Self approved',
+      );
+
+      expect(selfApproval.isFailure, true);
+      expect(
+        selfApproval.fold(onSuccess: (_) => null, onFailure: (f) => f)?.message,
+        contains('maker-checker violation'),
+      );
+    });
+
+    test('FeeApprovalsUseCase rejects approval if reviewer lacks approval permission', () async {
+      final accountantPerms = permissionsForRole(AppRole.accountant);
+
+      final unauthorized = await approvalsUseCase.reviewAdjustment(
+        userPermissions: accountantPerms,
+        requestId: 1,
+        requestedBy: 2, // Maker is accountant
+        reviewerId: 3,  // Checker is another accountant (lacks approvalsApprove permission)
+        approve: true,
+      );
+
+      expect(unauthorized.isFailure, true);
+      expect(
+        unauthorized.fold(onSuccess: (_) => null, onFailure: (f) => f),
+        isA<PermissionFailure>(),
+      );
+    });
+
+    test('FeeApprovalsUseCase succeeds when different user with admin permissions approves', () async {
+      final adminPerms = permissionsForRole(AppRole.admin);
+
+      final validApproval = await approvalsUseCase.reviewAdjustment(
+        userPermissions: adminPerms,
+        requestId: 1,
+        requestedBy: 2, // Maker (Accountant)
+        reviewerId: 1,  // Checker (Admin)
+        approve: true,
+        reviewerNote: 'Verified death certificate, approved',
+      );
+
+      expect(validApproval.isSuccess, true);
     });
   });
 }

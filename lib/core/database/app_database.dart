@@ -55,6 +55,11 @@ part 'app_database.g.dart';
     InventoryItemsTable,
     InventoryMovementsTable,
     StockTakesTable,
+    SuppliersTable,
+    SupplierLedgerTable,
+    PurchasesTable,
+    PurchaseItemsTable,
+    ItemIssuancesTable,
   ],
 )
 class AppDatabase extends _$AppDatabase {

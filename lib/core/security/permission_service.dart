@@ -92,6 +92,7 @@ Set<Permission> permissionsForRole(AppRole role) {
         Permission.inventoryView,
         Permission.inventoryStockIn,
         Permission.inventoryStockOut,
+        Permission.inventoryEdit,
         Permission.financeView,
         Permission.financeExpenseCreate,
         Permission.financeDayClose,
