@@ -3,7 +3,6 @@
 /// Permission checks and security rules live here, not in the UI.
 library;
 
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../entities/auth_entities.dart';

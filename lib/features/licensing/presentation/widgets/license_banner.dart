@@ -4,8 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/theme/app_theme.dart';
-import '../entities/license_entities.dart';
+import '../../domain/entities/license_entities.dart';
 import '../providers/licensing_providers.dart';
 import 'activation_dialog.dart';
 

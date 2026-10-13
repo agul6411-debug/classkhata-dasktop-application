@@ -9,6 +9,7 @@ import '../../../../core/security/audit_chain.dart';
 import '../../data/repositories/backup_repository_impl.dart';
 import '../../domain/entities/backup_meta.dart';
 import '../../domain/repositories/backup_repository.dart';
+import '../../domain/usecases/backup_scheduler_service.dart';
 
 final backupRepositoryProvider = Provider<BackupRepository>((ref) {
   final db = ref.watch(appDatabaseProvider);

@@ -6,7 +6,6 @@ import '../../../../app/providers.dart';
 import '../../data/licensing_repository_impl.dart';
 import '../../domain/entities/license_entities.dart';
 import '../../domain/repositories/licensing_repository.dart';
-import '../../domain/usecases/licensing_usecases.dart';
 
 final licensingRepositoryProvider = Provider<LicensingRepository>((ref) {
   final db = ref.watch(appDatabaseProvider);

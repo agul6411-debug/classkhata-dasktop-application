@@ -9,7 +9,6 @@ import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../academics/presentation/providers/academic_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
-import '../../domain/entities/student_entities.dart';
 import '../providers/student_providers.dart';
 
 class StudentFormDialog extends ConsumerStatefulWidget {

@@ -11,9 +11,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../core/constants/app_constants.dart';
 import '../core/database/app_database.dart';
-import '../core/logging/app_logger.dart';
-import '../core/security/key_store.dart';
-import '../core/security/password_hasher.dart';
 import '../core/services/startup_integrity_service.dart';
 
 part 'providers.g.dart';

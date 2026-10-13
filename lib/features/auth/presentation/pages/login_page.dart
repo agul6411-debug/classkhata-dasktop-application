@@ -8,6 +8,7 @@ import '../../../../app/theme/app_theme.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../../setup/presentation/providers/setup_providers.dart';
 import '../providers/auth_providers.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -24,6 +25,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final checkSetup = ref.read(checkSetupUseCaseProvider);
+      final res = await checkSetup();
+      if (res.isSuccess && res.valueOrThrow == false && mounted) {
+        context.go('/setup');
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -138,7 +151,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       onPressed: _isLoading ? null : _submit,
                       isLoading: _isLoading,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+
+                    TextButton.icon(
+                      icon: const Icon(Icons.app_registration, size: 16),
+                      label: const Text('First time setup? Create Admin Account'),
+                      onPressed: () => context.go('/setup'),
+                    ),
+                    const SizedBox(height: 4),
 
                     TextButton(
                       onPressed: () => context.go('/recover-password'),

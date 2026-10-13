@@ -7,9 +7,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../app/theme/app_theme.dart';
-import '../../features/fees/presentation/widgets/receipt_dialog.dart';
-import '../../features/students/domain/entities/student.dart';
-import '../../features/students/presentation/widgets/student_form_dialog.dart';
 
 enum SearchResultType { student, staff, item, receipt }
 
@@ -92,10 +89,10 @@ class _GlobalSearchDialogState extends ConsumerState<GlobalSearchDialog> {
       // 3. Search Inventory Items
       final allItems = await db.select(db.inventoryItemsTable).get();
       for (final it in allItems) {
-        if (it.name.toLowerCase().contains(q) || it.sku.toLowerCase().contains(q)) {
+        if (it.name.toLowerCase().contains(q)) {
           items.add(SearchResultItem(
             title: it.name,
-            subtitle: 'Inventory • SKU: ${it.sku} • In Stock: ${it.quantityOnHand} ${it.unit}',
+            subtitle: 'Inventory Item • In Stock: ${it.quantityOnHand} ${it.unit}',
             type: SearchResultType.item,
             payload: it,
           ));
@@ -251,7 +248,7 @@ class _GlobalSearchDialogState extends ConsumerState<GlobalSearchDialog> {
                     children: [
                       _buildQuickHint(Icons.school, 'Students (Name, Roll, Phone)'),
                       _buildQuickHint(Icons.badge, 'Staff (Name, Code)'),
-                      _buildQuickHint(Icons.inventory_2, 'Items (SKU, Name)'),
+                      _buildQuickHint(Icons.inventory_2, 'Items (Name)'),
                       _buildQuickHint(Icons.receipt, 'Receipts (Number)'),
                     ],
                   ),

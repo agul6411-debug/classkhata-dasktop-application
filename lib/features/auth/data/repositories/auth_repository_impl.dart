@@ -2,7 +2,6 @@
 library;
 
 import 'dart:convert';
-import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
@@ -11,7 +10,6 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/security/password_hasher.dart';
 import '../../../../core/security/permission_service.dart';
-import '../../../../core/database/tables/core_tables.dart';
 import '../../domain/entities/auth_entities.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_dao.dart';

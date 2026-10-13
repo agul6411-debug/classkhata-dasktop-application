@@ -7,11 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/providers.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../../../core/errors/failures.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../backup/domain/usecases/backup_scheduler_service.dart';
 import '../../../backup/presentation/providers/backup_providers.dart';
 import '../../../licensing/presentation/providers/licensing_providers.dart';
 import '../../../licensing/presentation/widgets/activation_dialog.dart';
@@ -690,13 +692,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                                     final res = await scheduler.testRestoreBackup(b.id);
                                     if (mounted) {
                                       res.fold(
-                                        onSuccess: (tr) => ScaffoldMessenger.of(context).showSnackBar(
+                                        onSuccess: (TestRestoreResult tr) => ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
                                             content: Text('Test restore passed: ${tr.recordsCount} student records verified in isolated sandbox.'),
                                             backgroundColor: Colors.teal,
                                           ),
                                         ),
-                                        onFailure: (f) => ScaffoldMessenger.of(context).showSnackBar(
+                                        onFailure: (AppFailure f) => ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(content: Text('Test restore error: ${f.message}'), backgroundColor: Colors.red),
                                         ),
                                       );
@@ -794,7 +796,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                     const Text('ClassKhata Offline Licensing', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     StatusBadge(
                       label: info.status.name.toUpperCase(),
-                      type: info.isActivated ? StatusBadgeType.paid : (info.isReadonly ? StatusBadgeType.cancelled : StatusBadgeType.pending),
+                      type: info.isActivated ? StatusBadgeType.paid : (info.isReadonly ? StatusBadgeType.overdue : StatusBadgeType.pending),
                     ),
                   ],
                 ),
