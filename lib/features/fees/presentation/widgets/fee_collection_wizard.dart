@@ -7,11 +7,13 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../../../core/constants/payment_modes.dart';
 import '../../../../core/money/money.dart';
 import '../../../../core/security/permission_service.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../../academics/presentation/providers/academic_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../../students/domain/entities/student_entities.dart';
@@ -39,7 +41,7 @@ class _FeeCollectionWizardState extends ConsumerState<FeeCollectionWizard> {
 
   // Step 2: Payment inputs
   final _amountCtrl = TextEditingController();
-  String _paymentMode = 'cash';
+  String _paymentMode = PaymentModes.handCash;
   final _refCtrl = TextEditingController();
 
   @override
@@ -85,6 +87,8 @@ class _FeeCollectionWizardState extends ConsumerState<FeeCollectionWizard> {
         Navigator.of(context).pop();
 
         final academy = ref.read(academyProfileProvider).valueOrNull;
+        final academicData = ref.read(academicDataProvider).valueOrNull;
+        final batchName = academicData?.batches.where((b) => b.id == _selectedVoucher!.batchId).firstOrNull?.name;
 
         // Show official receipt dialog
         showDialog(
@@ -94,10 +98,13 @@ class _FeeCollectionWizardState extends ConsumerState<FeeCollectionWizard> {
             studentName: _selectedStudent!.name,
             guardianPhone: _selectedStudent!.guardianPhone,
             voucherNumber: _selectedVoucher!.voucherNumber,
+            paymentMode: data.payment.paymentMode,
             rollNumber: _selectedStudent!.rollNumber,
             academyName: academy?.name ?? 'ClassKhata Academy',
             academyPhone: academy?.phone,
             academyAddress: academy?.address,
+            voucher: data.updatedVoucher,
+            batchName: batchName,
           ),
         );
       },
@@ -111,7 +118,6 @@ class _FeeCollectionWizardState extends ConsumerState<FeeCollectionWizard> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 580),
@@ -130,7 +136,7 @@ class _FeeCollectionWizardState extends ConsumerState<FeeCollectionWizard> {
                     children: [
                       Text(
                         'Fee Collection (Step ${_currentStep + 1} of 3)',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading),
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.headingCol(context)),
                       ),
                       Text(
                         _stepSubtitle(),
@@ -274,9 +280,9 @@ class _FeeCollectionWizardState extends ConsumerState<FeeCollectionWizard> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.inputFill,
+            color: AppColors.subCardBg(context),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: AppColors.borderCol(context)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -298,18 +304,18 @@ class _FeeCollectionWizardState extends ConsumerState<FeeCollectionWizard> {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          value: _paymentMode,
+          initialValue: _paymentMode,
           decoration: const InputDecoration(labelText: 'Payment Mode *'),
-          items: const [
-            DropdownMenuItem(value: 'cash', child: Text('Cash')),
-            DropdownMenuItem(value: 'bank', child: Text('Bank Transfer / Deposit')),
-            DropdownMenuItem(value: 'online', child: Text('Online / Mobile Wallet')),
-          ],
-          onChanged: (val) => setState(() => _paymentMode = val ?? 'cash'),
+          items: PaymentModes.dropdownItems,
+          onChanged: (val) => setState(() => _paymentMode = val ?? PaymentModes.handCash),
         ),
-        if (_paymentMode != 'cash') ...[
+        if (_paymentMode != PaymentModes.handCash && _paymentMode != 'cash') ...[
           const SizedBox(height: 12),
-          AppTextField(controller: _refCtrl, label: 'Reference / Transaction ID'),
+          AppTextField(
+            controller: _refCtrl,
+            label: 'Reference / Transaction ID (TID / Cheque #) *',
+            hint: 'e.g. EasyPaisa / JazzCash Trx ID or Bank Ref',
+          ),
         ],
         const SizedBox(height: 24),
         Row(

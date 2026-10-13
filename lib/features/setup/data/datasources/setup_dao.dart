@@ -6,9 +6,9 @@ library;
 import '../../../../core/database/app_database.dart';
 
 class SetupDao {
-  final AppDatabase _db;
 
   const SetupDao(this._db);
+  final AppDatabase _db;
 
   AppDatabase get db => _db;
 

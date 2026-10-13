@@ -7,8 +7,8 @@ import '../entities/student_entities.dart';
 import '../repositories/student_repository.dart';
 
 class BulkImportStudentsUseCase {
-  final StudentRepository _repository;
   const BulkImportStudentsUseCase(this._repository);
+  final StudentRepository _repository;
 
   /// Validates and sanitizes imported student rows before database ingestion.
   /// Protects against formula injection in spreadsheets (prefixes =, +, -, @).

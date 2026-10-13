@@ -2,7 +2,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:pdf/pdf.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/money/money.dart';
 import '../../../../core/printing/pdf_document_service.dart';
@@ -10,11 +9,6 @@ import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
 import '../../domain/entities/student_entities.dart';
 
 class StudentFeeCardDialog extends StatelessWidget {
-  final Student student;
-  final String batchName;
-  final Money monthlyFee;
-  final int dueDay;
-  final String academyName;
 
   const StudentFeeCardDialog({
     super.key,
@@ -24,6 +18,11 @@ class StudentFeeCardDialog extends StatelessWidget {
     required this.dueDay,
     this.academyName = 'ClassKhata Academy',
   });
+  final Student student;
+  final String batchName;
+  final Money monthlyFee;
+  final int dueDay;
+  final String academyName;
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +166,6 @@ class StudentFeeCardDialog extends StatelessWidget {
                         PdfPrintPreviewDialog.show(
                           context,
                           title: 'Fee Ledger Card - ${student.name}',
-                          initialFormat: PdfPageFormat.a4,
                           pdfFileName: 'fee_card_${student.rollNumber}.pdf',
                           buildPdf: (format) => PdfDocumentService.generateStudentFeeCardPdf(
                             student: student,

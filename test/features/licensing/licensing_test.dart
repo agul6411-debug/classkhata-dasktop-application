@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:drift/native.dart';
-import 'package:flutter_test/flutter_test.dart';
 
 import 'package:classkhata/core/database/app_database.dart';
 import 'package:classkhata/features/licensing/data/licensing_repository_impl.dart';
 import 'package:classkhata/features/licensing/domain/entities/license_entities.dart';
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 import '../../../tools/generate_license.dart';
 
 void main() {
@@ -107,7 +108,6 @@ void main() {
       final token = generateSignedLicenseKey(
         machineId: repo.machineId,
         academyName: 'Army Public School',
-        licenseType: 'lifetime',
       );
 
       final activateRes = await repo.activateLicense(token);

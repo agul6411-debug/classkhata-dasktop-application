@@ -70,7 +70,6 @@ class _VoucherGenerateDialogState extends ConsumerState<VoucherGenerateDialog> {
     final academicDataAsync = ref.watch(academicDataProvider);
 
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
@@ -80,9 +79,9 @@ class _VoucherGenerateDialogState extends ConsumerState<VoucherGenerateDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'Generate Monthly Vouchers',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.headingCol(context)),
               ),
               const Divider(),
               const SizedBox(height: 8),
@@ -92,7 +91,7 @@ class _VoucherGenerateDialogState extends ConsumerState<VoucherGenerateDialog> {
               ],
               academicDataAsync.when(
                 data: (data) => DropdownButtonFormField<int>(
-                  value: _selectedBatchId,
+                  initialValue: _selectedBatchId,
                   decoration: const InputDecoration(labelText: 'Target Class & Section *'),
                   items: data.batches
                       .map((b) => DropdownMenuItem(

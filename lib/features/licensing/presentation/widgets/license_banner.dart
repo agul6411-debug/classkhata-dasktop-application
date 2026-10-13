@@ -14,6 +14,7 @@ class LicenseBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final infoAsync = ref.watch(licenseInfoProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return infoAsync.when(
       data: (info) {
@@ -30,28 +31,34 @@ class LicenseBanner extends ConsumerWidget {
         String text;
 
         if (info.status == LicenseStatus.expired) {
-          bgColor = Colors.red.shade50;
-          textColor = Colors.red.shade900;
-          borderColor = Colors.red.shade200;
+          bgColor = isDark ? const Color(0xFF450A0A) : Colors.red.shade50;
+          textColor = isDark ? const Color(0xFFFCA5A5) : Colors.red.shade900;
+          borderColor = isDark ? const Color(0xFF991B1B) : Colors.red.shade200;
           icon = Icons.lock_outline;
           text = 'Trial Expired — System in Read-Only mode. Data remains viewable & exportable.';
         } else if (info.status == LicenseStatus.clockRollbackDetected) {
-          bgColor = Colors.orange.shade50;
-          textColor = Colors.orange.shade900;
-          borderColor = Colors.orange.shade300;
+          bgColor = isDark ? const Color(0xFF431407) : Colors.orange.shade50;
+          textColor = isDark ? const Color(0xFFFDBA74) : Colors.orange.shade900;
+          borderColor = isDark ? const Color(0xFF9A3412) : Colors.orange.shade300;
           icon = Icons.access_time_filled;
           text = 'Clock Rollback Detected — Financial entry creation is temporarily disabled.';
         } else if (info.status == LicenseStatus.tampered) {
-          bgColor = Colors.red.shade50;
-          textColor = Colors.red.shade900;
-          borderColor = Colors.red.shade200;
+          bgColor = isDark ? const Color(0xFF450A0A) : Colors.red.shade50;
+          textColor = isDark ? const Color(0xFFFCA5A5) : Colors.red.shade900;
+          borderColor = isDark ? const Color(0xFF991B1B) : Colors.red.shade200;
           icon = Icons.security_update_warning;
           text = 'Licensing Integrity Alert — Please reactivate your lifetime license.';
         } else {
           // Trial mode
-          bgColor = info.daysRemaining <= 3 ? Colors.amber.shade50 : Colors.teal.shade50;
-          textColor = info.daysRemaining <= 3 ? Colors.brown.shade900 : Colors.teal.shade900;
-          borderColor = info.daysRemaining <= 3 ? Colors.amber.shade300 : Colors.teal.shade200;
+          if (info.daysRemaining <= 3) {
+            bgColor = isDark ? const Color(0xFF451A03) : Colors.amber.shade50;
+            textColor = isDark ? const Color(0xFFFDE68A) : Colors.brown.shade900;
+            borderColor = isDark ? const Color(0xFFB45309) : Colors.amber.shade300;
+          } else {
+            bgColor = isDark ? const Color(0xFF042F2E) : Colors.teal.shade50;
+            textColor = isDark ? const Color(0xFF99F6E4) : Colors.teal.shade900;
+            borderColor = isDark ? const Color(0xFF115E59) : Colors.teal.shade200;
+          }
           icon = Icons.timer_outlined;
           text = 'Trial Mode: ${info.daysRemaining} day${info.daysRemaining == 1 ? '' : 's'} remaining.';
         }

@@ -8,8 +8,8 @@ import '../entities/inventory_entities.dart';
 import '../repositories/inventory_repository.dart';
 
 class CreateInventoryItemUseCase {
-  final InventoryRepository _repository;
   const CreateInventoryItemUseCase(this._repository);
+  final InventoryRepository _repository;
 
   Future<Result<InventoryItem>> call({
     required Set<Permission> userPermissions,
@@ -54,8 +54,8 @@ class CreateInventoryItemUseCase {
 }
 
 class RecordStockMovementUseCase {
-  final InventoryRepository _repository;
   const RecordStockMovementUseCase(this._repository);
+  final InventoryRepository _repository;
 
   Future<Result<InventoryMovement>> call({
     required Set<Permission> userPermissions,
@@ -99,8 +99,8 @@ class RecordStockMovementUseCase {
 }
 
 class RecordPurchaseUseCase {
-  final InventoryRepository _repository;
   const RecordPurchaseUseCase(this._repository);
+  final InventoryRepository _repository;
 
   Future<Result<PurchaseRecord>> call({
     required Set<Permission> userPermissions,
@@ -150,8 +150,8 @@ class RecordPurchaseUseCase {
 }
 
 class IssueItemUseCase {
-  final InventoryRepository _repository;
   const IssueItemUseCase(this._repository);
+  final InventoryRepository _repository;
 
   Future<Result<ItemIssuance>> call({
     required Set<Permission> userPermissions,
@@ -203,8 +203,8 @@ class IssueItemUseCase {
 }
 
 class RecordSupplierPaymentUseCase {
-  final InventoryRepository _repository;
   const RecordSupplierPaymentUseCase(this._repository);
+  final InventoryRepository _repository;
 
   Future<Result<void>> call({
     required Set<Permission> userPermissions,
@@ -239,8 +239,8 @@ class RecordSupplierPaymentUseCase {
 }
 
 class StockReconciliationUseCase {
-  final InventoryRepository _repository;
   const StockReconciliationUseCase(this._repository);
+  final InventoryRepository _repository;
 
   Future<Result<({StockTakeRecord? record, bool requiresApproval, int? approvalId})>> call({
     required Set<Permission> userPermissions,
@@ -273,8 +273,8 @@ class StockReconciliationUseCase {
 }
 
 class GetStockValuationUseCase {
-  final InventoryRepository _repository;
   const GetStockValuationUseCase(this._repository);
+  final InventoryRepository _repository;
 
   Future<Result<StockValuationReport>> call({
     required Set<Permission> userPermissions,

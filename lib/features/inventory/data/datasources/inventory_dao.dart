@@ -16,8 +16,8 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 
 class InventoryDao {
-  final AppDatabase _db;
   const InventoryDao(this._db);
+  final AppDatabase _db;
 
   AppDatabase get db => _db;
 
@@ -38,7 +38,7 @@ class InventoryDao {
   Future<List<InventoryItemsTableData>> getItems({int? categoryId, bool? lowStockOnly}) {
     final query = _db.select(_db.inventoryItemsTable);
     if (categoryId != null) query.where((t) => t.categoryId.equals(categoryId));
-    if (lowStockOnly == true) {
+    if (lowStockOnly ?? false) {
       query.where((t) => t.quantityOnHand.isSmallerOrEqual(t.reorderLevel));
     }
     query.orderBy([(t) => OrderingTerm.asc(t.name)]);

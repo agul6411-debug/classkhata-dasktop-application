@@ -34,13 +34,13 @@ void main() {
     });
 
     test('integer division', () {
-      final m = Money.fromPaisa(1000);
+      const m = Money.fromPaisa(1000);
       expect((m ~/ 3).paisa, 333); // truncates
     });
 
     test('comparison operators', () {
-      final a = Money.fromPaisa(500);
-      final b = Money.fromPaisa(1000);
+      const a = Money.fromPaisa(500);
+      const b = Money.fromPaisa(1000);
       expect(a < b, true);
       expect(b > a, true);
       expect(a <= a, true);
@@ -68,8 +68,8 @@ void main() {
     });
 
     test('compareTo', () {
-      final a = Money.fromPaisa(100);
-      final b = Money.fromPaisa(200);
+      const a = Money.fromPaisa(100);
+      const b = Money.fromPaisa(200);
       expect(a.compareTo(b), lessThan(0));
       expect(b.compareTo(a), greaterThan(0));
       expect(a.compareTo(a), 0);
@@ -77,8 +77,8 @@ void main() {
 
     test('no floating-point drift', () {
       // 0.1 + 0.2 != 0.3 in floating-point; with integer paisa it's exact
-      final a = Money.fromPaisa(10);
-      final b = Money.fromPaisa(20);
+      const a = Money.fromPaisa(10);
+      const b = Money.fromPaisa(20);
       expect((a + b).paisa, 30);
     });
   });

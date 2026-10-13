@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import '../../app/theme/app_theme.dart';
 
 class ErrorBanner extends StatelessWidget {
-  final String message;
 
   const ErrorBanner({super.key, required this.message});
+  final String message;
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +39,9 @@ class ErrorBanner extends StatelessWidget {
 
 /// Success banner widget.
 class SuccessBanner extends StatelessWidget {
-  final String message;
 
   const SuccessBanner({super.key, required this.message});
+  final String message;
 
   @override
   Widget build(BuildContext context) {

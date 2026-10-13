@@ -1,6 +1,6 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:classkhata/core/money/money.dart';
 import 'package:classkhata/features/finance/domain/entities/finance_entities.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Profit & Loss Logic', () {
@@ -46,7 +46,7 @@ void main() {
     });
 
     test('Handles zero income without division by zero error', () {
-      final totalIncome = const Money(0);
+      const totalIncome = Money(0);
       final totalExpenses = Money.fromRupees(15000);
       final netProfit = totalIncome - totalExpenses;
       final margin = totalIncome.isZero ? 0.0 : (netProfit.paisa / totalIncome.paisa) * 100;

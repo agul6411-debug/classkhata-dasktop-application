@@ -4,18 +4,20 @@
 /// Settings at the bottom.
 library;
 
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter/services.dart';
+
 import '../../app/providers.dart';
 import '../../app/theme/app_theme.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/backup/presentation/providers/backup_providers.dart';
 import '../../features/fees/presentation/widgets/fee_collection_wizard.dart';
-import '../../features/students/presentation/widgets/student_form_dialog.dart';
-
 import '../../features/licensing/presentation/widgets/license_banner.dart';
+import '../../features/settings/presentation/providers/settings_providers.dart';
+import '../../features/students/presentation/widgets/student_form_dialog.dart';
 import '../widgets/global_search_dialog.dart';
 
 class _NewStudentIntent extends Intent {
@@ -39,8 +41,8 @@ class _HelpShortcutsIntent extends Intent {
 }
 
 class AppShell extends ConsumerWidget {
-  final Widget child;
   const AppShell({super.key, required this.child});
+  final Widget child;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -111,7 +113,7 @@ class AppShell extends ConsumerWidget {
                     children: [
                       const LicenseBanner(),
                       _buildTopHeaderBar(context),
-                      _buildIntegrityBanner(ref),
+                      _buildIntegrityBanner(context, ref),
                       const Divider(height: 1),
                       Expanded(child: child),
                     ],
@@ -126,10 +128,17 @@ class AppShell extends ConsumerWidget {
   }
 
   Widget _buildTopHeaderBar(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.surface;
+    final inputColor = isDark ? AppColors.darkBackground : AppColors.inputFill;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.border;
+    final headingColor = isDark ? AppColors.darkTextPrimary : AppColors.heading;
+    final textMutedColor = isDark ? AppColors.darkTextSecondary : AppColors.textMuted;
+
     return Container(
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      color: AppColors.surface,
+      color: surfaceColor,
       child: Row(
         children: [
           // Global Search Clickable Pill
@@ -143,17 +152,17 @@ class AppShell extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.inputFill,
+                  color: inputColor,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: borderColor),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.search, size: 16, color: AppColors.textMuted),
-                    SizedBox(width: 8),
+                    Icon(Icons.search, size: 16, color: textMutedColor),
+                    const SizedBox(width: 8),
                     Text(
                       'Search students, staff, items, receipts... (Ctrl+K)',
-                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                      style: TextStyle(fontSize: 12, color: textMutedColor),
                     ),
                   ],
                 ),
@@ -165,7 +174,7 @@ class AppShell extends ConsumerWidget {
           Tooltip(
             message: 'New Student (Ctrl+N)',
             child: IconButton(
-              icon: const Icon(Icons.person_add_alt_1, size: 18, color: AppColors.heading),
+              icon: Icon(Icons.person_add_alt_1, size: 18, color: headingColor),
               onPressed: () => showDialog<bool>(context: context, builder: (_) => const StudentFormDialog()),
             ),
           ),
@@ -179,7 +188,7 @@ class AppShell extends ConsumerWidget {
           Tooltip(
             message: 'Shortcuts Help (F1)',
             child: IconButton(
-              icon: const Icon(Icons.help_outline, size: 18, color: AppColors.textMuted),
+              icon: Icon(Icons.help_outline, size: 18, color: textMutedColor),
               onPressed: () => _showShortcutsHelp(context),
             ),
           ),
@@ -188,24 +197,34 @@ class AppShell extends ConsumerWidget {
     );
   }
 
-  Widget _buildIntegrityBanner(WidgetRef ref) {
+  Widget _buildIntegrityBanner(BuildContext context, WidgetRef ref) {
     final integrityAsync = ref.watch(startupIntegrityProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return integrityAsync.when(
       data: (res) {
         if (res.isHealthy || res.userFriendlyMessage == null) {
           return const SizedBox.shrink();
         }
+        final bgColor = isDark ? const Color(0xFF451A03) : Colors.amber.shade100;
+        final textColor = isDark ? const Color(0xFFFDE68A) : Colors.brown.shade900;
+        final iconColor = isDark ? const Color(0xFFFBBF24) : Colors.brown.shade800;
+        final borderColor = isDark ? const Color(0xFFB45309) : Colors.amber.shade300;
+
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: Colors.amber.shade100,
+          decoration: BoxDecoration(
+            color: bgColor,
+            border: Border(bottom: BorderSide(color: borderColor)),
+          ),
           child: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.brown.shade800, size: 20),
+              Icon(Icons.warning_amber_rounded, color: iconColor, size: 20),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   res.userFriendlyMessage!,
-                  style: TextStyle(color: Colors.brown.shade900, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -248,9 +267,9 @@ class AppShell extends ConsumerWidget {
 }
 
 class _ShortcutItem extends StatelessWidget {
+  const _ShortcutItem({required this.keys, required this.action});
   final String keys;
   final String action;
-  const _ShortcutItem({required this.keys, required this.action});
 
   @override
   Widget build(BuildContext context) {
@@ -286,27 +305,89 @@ class _Sidebar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.surface;
+    final headingColor = isDark ? AppColors.darkTextPrimary : AppColors.heading;
+    final textMutedColor = isDark ? AppColors.darkTextSecondary : AppColors.textMuted;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.border;
+
+    final profileAsync = ref.watch(academyProfileProvider);
+    final profile = profileAsync.valueOrNull;
+    final logoPath = profile?.logoPath?.trim();
+    final hasLogo = logoPath != null && logoPath.isNotEmpty && File(logoPath).existsSync();
+    final academyName = (profile?.name.trim().isNotEmpty ?? false) ? profile!.name.trim() : 'ClassKhata';
+    final tagline = (profile?.tagline?.trim().isNotEmpty ?? false) ? profile!.tagline!.trim() : 'School Operations';
 
     return Container(
       width: 200,
-      color: AppColors.surface,
+      color: surfaceColor,
       child: Column(
         children: [
-          // App brand
+          // App brand & School Logo
           Container(
-            height: 60,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             alignment: Alignment.centerLeft,
-            child: const Text(
-              'ClassKhata',
-              style: TextStyle(
-                color: AppColors.heading,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: hasLogo ? Colors.transparent : AppColors.accent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: hasLogo ? Border.all(color: AppColors.accent.withValues(alpha: 0.3)) : null,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accent.withValues(alpha: 0.25),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: hasLogo
+                      ? Image.file(
+                          File(logoPath),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.school, color: Colors.white, size: 20),
+                        )
+                      : const Icon(Icons.school, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        academyName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: headingColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      Text(
+                        tagline,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: textMutedColor,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          const Divider(height: 1),
+          Divider(height: 1, color: borderColor),
           const SizedBox(height: 8),
 
           // Main nav items
@@ -348,7 +429,7 @@ class _Sidebar extends ConsumerWidget {
           ),
 
           const Spacer(),
-          const Divider(height: 1),
+          Divider(height: 1, color: borderColor),
 
           // Settings at the bottom
           _NavItem(
@@ -365,20 +446,22 @@ class _Sidebar extends ConsumerWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String route;
-  final bool isActive;
-
   const _NavItem({
     required this.icon,
     required this.label,
     required this.route,
     required this.isActive,
   });
+  final IconData icon;
+  final String label;
+  final String route;
+  final bool isActive;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unselectedColor = isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -388,21 +471,24 @@ class _NavItem extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
           decoration: BoxDecoration(
-            color: isActive ? AppColors.accent.withOpacity(0.1) : Colors.transparent,
+            color: isActive ? AppColors.accent.withValues(alpha: 0.10) : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isActive ? AppColors.accent.withValues(alpha: 0.25) : Colors.transparent,
+            ),
           ),
           child: Row(
             children: [
               Icon(
                 icon,
                 size: 18,
-                color: isActive ? AppColors.accent : AppColors.textSecondary,
+                color: isActive ? AppColors.accent : unselectedColor,
               ),
               const SizedBox(width: 10),
               Text(
                 label,
                 style: TextStyle(
-                  color: isActive ? AppColors.accent : AppColors.textSecondary,
+                  color: isActive ? AppColors.accent : unselectedColor,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                   fontSize: 14,
                 ),
@@ -465,8 +551,8 @@ class _LockScreenState extends ConsumerState<_LockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 380),
@@ -479,30 +565,31 @@ class _LockScreenState extends ConsumerState<_LockScreen> {
                 children: [
                   const Icon(Icons.lock_outline, size: 40, color: AppColors.accent),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Session Locked',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.heading,
+                      color: AppColors.headingCol(context),
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Enter your password to continue.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    style: TextStyle(color: AppColors.textMutedCol(context), fontSize: 13),
                   ),
                   const SizedBox(height: 24),
                   if (_error != null) ...[
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppColors.overdueBg,
+                        color: isDark ? const Color(0xFF450A0A) : AppColors.overdueBg,
+                        border: Border.all(color: isDark ? const Color(0xFF991B1B) : AppColors.overdue.withOpacity(0.3)),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(_error!, style: const TextStyle(color: AppColors.overdue, fontSize: 13)),
+                      child: Text(_error!, style: TextStyle(color: isDark ? const Color(0xFFFCA5A5) : AppColors.overdue, fontSize: 13)),
                     ),
                     const SizedBox(height: 12),
                   ],

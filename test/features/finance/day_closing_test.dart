@@ -1,6 +1,6 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:classkhata/core/money/money.dart';
 import 'package:classkhata/features/finance/domain/entities/finance_entities.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Day Closing Balancing & Discrepancies', () {
@@ -60,7 +60,7 @@ void main() {
     test('Identifies cash surplus as positive discrepancy', () {
       final opening = Money.fromRupees(1000);
       final receipts = Money.fromRupees(5000);
-      final expenses = const Money(0);
+      const expenses = Money(0);
       final expected = opening + receipts - expenses; // 6,000 PKR expected
       final actual = Money.fromRupees(6200); // 6,200 PKR counted (200 surplus)
       final discrepancy = actual - expected;

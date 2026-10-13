@@ -96,7 +96,6 @@ class _ItemFormDialogState extends ConsumerState<ItemFormDialog> {
     final categoriesAsync = ref.watch(inventoryCategoriesProvider);
 
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
@@ -109,9 +108,9 @@ class _ItemFormDialogState extends ConsumerState<ItemFormDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Add Inventory Item',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.heading),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.headingCol(context)),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, size: 20),

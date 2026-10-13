@@ -7,8 +7,8 @@ import '../entities/academic_entities.dart';
 import '../repositories/academic_repository.dart';
 
 class CreateSessionUseCase {
-  final AcademicRepository _repository;
   const CreateSessionUseCase(this._repository);
+  final AcademicRepository _repository;
 
   Future<Result<AcademicSession>> call({
     required String name,
@@ -34,8 +34,8 @@ class CreateSessionUseCase {
 }
 
 class CreateCourseUseCase {
-  final AcademicRepository _repository;
   const CreateCourseUseCase(this._repository);
+  final AcademicRepository _repository;
 
   Future<Result<Course>> call({
     required String name,
@@ -56,8 +56,8 @@ class CreateCourseUseCase {
 }
 
 class CreateBatchUseCase {
-  final AcademicRepository _repository;
   const CreateBatchUseCase(this._repository);
+  final AcademicRepository _repository;
 
   Future<Result<Batch>> call({
     required int sessionId,
@@ -94,8 +94,8 @@ class CreateBatchUseCase {
 }
 
 class GetAcademicDataUseCase {
-  final AcademicRepository _repository;
   const GetAcademicDataUseCase(this._repository);
+  final AcademicRepository _repository;
 
   Future<Result<({List<AcademicSession> sessions, List<Course> courses, List<Batch> batches})>> call() async {
     final sRes = await _repository.getSessions();
@@ -116,8 +116,8 @@ class GetAcademicDataUseCase {
 }
 
 class SetCurrentSessionUseCase {
-  final AcademicRepository _repository;
   const SetCurrentSessionUseCase(this._repository);
+  final AcademicRepository _repository;
 
   Future<Result<void>> call(int sessionId) => _repository.setCurrentSession(sessionId);
 }

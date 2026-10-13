@@ -2,12 +2,13 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../shared/localization/app_localizations.dart';
+import 'providers.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
-import 'providers.dart';
 
 class ClassKhataApp extends ConsumerWidget {
   const ClassKhataApp({super.key});

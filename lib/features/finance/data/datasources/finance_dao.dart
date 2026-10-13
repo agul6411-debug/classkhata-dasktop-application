@@ -7,8 +7,8 @@ import '../../../../core/money/money.dart';
 import '../../domain/entities/finance_entities.dart';
 
 class FinanceDao {
-  final AppDatabase _db;
   const FinanceDao(this._db);
+  final AppDatabase _db;
 
   AppDatabase get db => _db;
 

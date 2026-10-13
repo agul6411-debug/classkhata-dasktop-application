@@ -1,11 +1,10 @@
 import 'dart:io';
-import 'package:drift/drift.dart' hide isNull, isNotNull;
-import 'package:drift/native.dart';
-import 'package:flutter_test/flutter_test.dart';
 
 import 'package:classkhata/core/database/app_database.dart';
 import 'package:classkhata/features/backup/data/repositories/backup_repository_impl.dart';
 import 'package:classkhata/features/backup/domain/usecases/backup_scheduler_service.dart';
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late AppDatabase db;
@@ -34,7 +33,7 @@ void main() {
 
   group('Backup Scheduler, Retention & Test Restore', () {
     test('checkAndRunDailyBackup triggers backup on first run when due', () async {
-      final res = await scheduler.checkAndRunDailyBackup(createdBy: 1);
+      final res = await scheduler.checkAndRunDailyBackup();
       expect(res.isSuccess, isTrue);
 
       final meta = res.valueOrThrow;
@@ -48,11 +47,11 @@ void main() {
 
     test('checkAndRunDailyBackup skips execution if backup was already run within 24 hours', () async {
       // First execution
-      final first = await scheduler.checkAndRunDailyBackup(createdBy: 1);
+      final first = await scheduler.checkAndRunDailyBackup();
       expect(first.valueOrThrow, isNotNull);
 
       // Second immediate execution within 24 hours
-      final second = await scheduler.checkAndRunDailyBackup(createdBy: 1);
+      final second = await scheduler.checkAndRunDailyBackup();
       expect(second.isSuccess, isTrue);
       expect(second.valueOrThrow, isNull); // Skipped
 

@@ -6,11 +6,6 @@ import '../../../../core/money/money.dart';
 
 /// School Academic Session (e.g. 2026-2027)
 class AcademicSession extends Equatable {
-  final int id;
-  final String name;
-  final DateTime startDate;
-  final DateTime endDate;
-  final bool isCurrent;
 
   const AcademicSession({
     required this.id,
@@ -19,6 +14,11 @@ class AcademicSession extends Equatable {
     required this.endDate,
     required this.isCurrent,
   });
+  final int id;
+  final String name;
+  final DateTime startDate;
+  final DateTime endDate;
+  final bool isCurrent;
 
   @override
   List<Object?> get props => [id, name, startDate, endDate, isCurrent];
@@ -26,10 +26,6 @@ class AcademicSession extends Equatable {
 
 /// School Class / Grade Level (e.g. Nursery, Class 1 - Class 10)
 class Course extends Equatable {
-  final int id;
-  final String name;
-  final String? code;
-  final String? description;
 
   const Course({
     required this.id,
@@ -37,6 +33,10 @@ class Course extends Equatable {
     this.code,
     this.description,
   });
+  final int id;
+  final String name;
+  final String? code;
+  final String? description;
 
   /// Alias for school terminology
   String get className => name;
@@ -50,16 +50,6 @@ typedef SchoolClass = Course;
 
 /// Class Section (e.g. Class 9 - Section A in Session 2026-2027)
 class Batch extends Equatable {
-  final int id;
-  final int sessionId;
-  final int courseId;
-  final String name;
-  final String? instructorName; // Class teacher / in-charge
-  final String? timing; // Room number or schedule
-  final String? duration;
-  final Money monthlyFee;
-  final int dueDay; // 1 - 28
-  final bool isActive;
 
   const Batch({
     required this.id,
@@ -73,6 +63,16 @@ class Batch extends Equatable {
     required this.dueDay,
     required this.isActive,
   });
+  final int id;
+  final int sessionId;
+  final int courseId;
+  final String name;
+  final String? instructorName; // Class teacher / in-charge
+  final String? timing; // Room number or schedule
+  final String? duration;
+  final Money monthlyFee;
+  final int dueDay; // 1 - 28
+  final bool isActive;
 
   /// Alias for section name
   String get sectionName => name;

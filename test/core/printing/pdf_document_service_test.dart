@@ -1,12 +1,12 @@
 import 'dart:convert';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:pdf/pdf.dart';
 
 import 'package:classkhata/core/money/money.dart';
 import 'package:classkhata/core/printing/pdf_document_service.dart';
 import 'package:classkhata/features/fees/domain/entities/fee_entities.dart';
 import 'package:classkhata/features/payroll/domain/entities/payroll_entities.dart';
 import 'package:classkhata/features/students/domain/entities/student_entities.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf/pdf.dart';
 
 void main() {
   group('PdfDocumentService Tests', () {
@@ -32,7 +32,6 @@ void main() {
         academyName: 'Al-Hadi Grammar School',
         academyAddress: 'Gulshan-e-Iqbal, Karachi',
         academyPhone: '021-34567890',
-        format: PdfPageFormat.roll80,
       );
 
       expect(thermalBytes, isNotEmpty);
@@ -63,16 +62,16 @@ void main() {
         studentId: 101,
         batchId: 5,
         monthYear: '2026-10',
-        issueDate: DateTime(2026, 10, 1),
+        issueDate: DateTime(2026, 10),
         dueDate: DateTime(2026, 10, 10),
         baseAmount: Money.fromRupees(6500),
         discount: Money.fromRupees(500),
         lateFee: Money.fromRupees(300),
         carryForward: Money.fromRupees(1000),
         totalDue: Money.fromRupees(7000),
-        amountPaid: Money.zero(),
+        amountPaid: const Money.zero(),
         status: VoucherStatus.unpaid,
-        createdAt: DateTime(2026, 10, 1),
+        createdAt: DateTime(2026, 10),
       );
 
       final voucherBytes = await PdfDocumentService.generateFeeVoucherPdf(

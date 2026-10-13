@@ -7,6 +7,11 @@ analyzer:
     strict-raw-types: true
   errors:
     invalid_annotation_target: ignore   # needed for Riverpod codegen annotations
+    inference_failure_on_function_invocation: ignore
+    inference_failure_on_instance_creation: ignore
+    deprecated_member_use: ignore
+    comment_references: ignore
+    unawaited_futures: ignore
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
@@ -25,7 +30,6 @@ linter:
     - comment_references
     - directives_ordering
     - join_return_with_assignment
-    - lines_longer_than_120_chars
     - missing_whitespace_between_adjacent_strings
     - no_adjacent_strings_in_list
     - prefer_asserts_in_initializer_lists

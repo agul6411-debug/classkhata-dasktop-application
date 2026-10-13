@@ -81,8 +81,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -99,7 +100,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     Text(
                       'ClassKhata',
                       style: theme.textTheme.headlineMedium?.copyWith(
-                        color: AppColors.heading,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.heading,
                         fontWeight: FontWeight.w700,
                       ),
                       textAlign: TextAlign.center,
@@ -108,7 +109,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     Text(
                       'Sign in to continue',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textMuted,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.textMuted,
                       ),
                       textAlign: TextAlign.center,
                     ),

@@ -10,8 +10,8 @@ import '../../domain/repositories/student_repository.dart';
 import '../datasources/student_dao.dart';
 
 class StudentRepositoryImpl implements StudentRepository {
-  final StudentDao _dao;
   const StudentRepositoryImpl(this._dao);
+  final StudentDao _dao;
 
   @override
   Future<Result<List<Student>>> getStudents({

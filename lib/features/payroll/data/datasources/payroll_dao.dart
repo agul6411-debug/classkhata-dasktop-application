@@ -7,8 +7,8 @@ import '../../../../core/security/audit_chain.dart';
 import '../../domain/entities/payroll_entities.dart';
 
 class PayrollDao {
-  final AppDatabase _db;
   const PayrollDao(this._db);
+  final AppDatabase _db;
 
   AppDatabase get db => _db;
 

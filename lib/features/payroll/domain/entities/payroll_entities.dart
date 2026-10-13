@@ -20,14 +20,6 @@ enum StaffStatus {
 }
 
 class StaffMember extends Equatable {
-  final int id;
-  final String staffCode;
-  final String name;
-  final String phone;
-  final String designation;
-  final String? cnic;
-  final DateTime joiningDate;
-  final StaffStatus status;
 
   const StaffMember({
     required this.id,
@@ -39,19 +31,20 @@ class StaffMember extends Equatable {
     required this.joiningDate,
     required this.status,
   });
+  final int id;
+  final String staffCode;
+  final String name;
+  final String phone;
+  final String designation;
+  final String? cnic;
+  final DateTime joiningDate;
+  final StaffStatus status;
 
   @override
   List<Object?> get props => [id, staffCode, name, phone, designation, cnic, joiningDate, status];
 }
 
 class SalaryStructure extends Equatable {
-  final int id;
-  final int staffId;
-  final String structureType; // 'fixed', 'per_class', 'per_hour'
-  final Money baseAmount;
-  final Money allowances;
-  final Money deductions;
-  final bool isActive;
 
   const SalaryStructure({
     required this.id,
@@ -62,6 +55,13 @@ class SalaryStructure extends Equatable {
     required this.deductions,
     required this.isActive,
   });
+  final int id;
+  final int staffId;
+  final String structureType; // 'fixed', 'per_class', 'per_hour'
+  final Money baseAmount;
+  final Money allowances;
+  final Money deductions;
+  final bool isActive;
 
   Money get grossSalary => baseAmount + allowances;
   Money get netSalary => grossSalary - deductions;
@@ -71,19 +71,6 @@ class SalaryStructure extends Equatable {
 }
 
 class PayrollRun extends Equatable {
-  final int id;
-  final String monthYear;
-  final int staffId;
-  final String staffName;
-  final String designation;
-  final Money baseSalary;
-  final Money allowances;
-  final Money deductions;
-  final Money advanceRecovery;
-  final Money netSalary;
-  final String status; // 'unpaid', 'paid'
-  final DateTime? paidAt;
-  final String? paymentMode;
 
   const PayrollRun({
     required this.id,
@@ -100,6 +87,19 @@ class PayrollRun extends Equatable {
     this.paidAt,
     this.paymentMode,
   });
+  final int id;
+  final String monthYear;
+  final int staffId;
+  final String staffName;
+  final String designation;
+  final Money baseSalary;
+  final Money allowances;
+  final Money deductions;
+  final Money advanceRecovery;
+  final Money netSalary;
+  final String status; // 'unpaid', 'paid'
+  final DateTime? paidAt;
+  final String? paymentMode;
 
   bool get isPaid => status.toLowerCase() == 'paid';
 
@@ -122,13 +122,6 @@ class PayrollRun extends Equatable {
 }
 
 class StaffAdvance extends Equatable {
-  final int id;
-  final int staffId;
-  final Money amount;
-  final Money recovered;
-  final Money remaining;
-  final String? reason;
-  final DateTime issueDate;
 
   const StaffAdvance({
     required this.id,
@@ -139,6 +132,13 @@ class StaffAdvance extends Equatable {
     this.reason,
     required this.issueDate,
   });
+  final int id;
+  final int staffId;
+  final Money amount;
+  final Money recovered;
+  final Money remaining;
+  final String? reason;
+  final DateTime issueDate;
 
   bool get isFullyRecovered => remaining.isZero || remaining.isNegative;
 

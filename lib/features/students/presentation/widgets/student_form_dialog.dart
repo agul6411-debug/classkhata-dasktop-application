@@ -14,9 +14,9 @@ import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../providers/student_providers.dart';
 
 class StudentFormDialog extends ConsumerStatefulWidget {
-  final int? initialBatchId;
 
   const StudentFormDialog({super.key, this.initialBatchId});
+  final int? initialBatchId;
 
   @override
   ConsumerState<StudentFormDialog> createState() => _StudentFormDialogState();
@@ -111,7 +111,6 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
     });
 
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 580),
@@ -126,12 +125,12 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Register New Student',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.heading,
+                        color: AppColors.headingCol(context),
                       ),
                     ),
                     IconButton(
@@ -205,7 +204,7 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                         // Class dropdown
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            value: _selectedClassId,
+                            initialValue: _selectedClassId,
                             decoration: const InputDecoration(labelText: 'School Class / Grade *'),
                             items: availableClasses.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
                             onChanged: (val) {
@@ -223,7 +222,7 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                         // Section dropdown
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            value: _selectedBatchId,
+                            initialValue: _selectedBatchId,
                             decoration: InputDecoration(
                               labelText: 'Section *',
                               helperText: _selectedClassId == null
@@ -264,10 +263,10 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                       child: familiesAsync.when(
                         data: (families) {
                           return DropdownButtonFormField<int?>(
-                            value: _selectedFamilyId,
+                            initialValue: _selectedFamilyId,
                             decoration: const InputDecoration(labelText: 'Family Link (Siblings)'),
                             items: <DropdownMenuItem<int?>>[
-                              const DropdownMenuItem<int?>(value: null, child: Text('None (Individual)')),
+                              const DropdownMenuItem<int?>(child: Text('None (Individual)')),
                               ...families.map((f) => DropdownMenuItem<int?>(
                                     value: f.id,
                                     child: Text('${f.familyCode} - ${f.guardianName}'),

@@ -78,7 +78,6 @@ class _AdvanceFormDialogState extends ConsumerState<AdvanceFormDialog> {
     final staffAsync = ref.watch(staffListProvider);
 
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
@@ -88,9 +87,9 @@ class _AdvanceFormDialogState extends ConsumerState<AdvanceFormDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'Issue Salary Advance',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.headingCol(context)),
               ),
               const SizedBox(height: 8),
               const Divider(),
@@ -102,7 +101,7 @@ class _AdvanceFormDialogState extends ConsumerState<AdvanceFormDialog> {
               staffAsync.when(
                 data: (staffList) {
                   return DropdownButtonFormField<int>(
-                    value: _selectedStaffId ?? (staffList.isNotEmpty ? staffList.first.id : null),
+                    initialValue: _selectedStaffId ?? (staffList.isNotEmpty ? staffList.first.id : null),
                     decoration: const InputDecoration(labelText: 'Staff Member *'),
                     items: staffList
                         .map((s) => DropdownMenuItem(value: s.id, child: Text('${s.name} (${s.designation})')))

@@ -1,9 +1,9 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:classkhata/core/money/money.dart';
 import 'package:classkhata/core/security/permission_service.dart';
 import 'package:classkhata/features/inventory/domain/entities/inventory_entities.dart';
 import 'package:classkhata/features/inventory/domain/repositories/inventory_repository.dart';
 import 'package:classkhata/features/inventory/domain/usecases/inventory_usecases.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Inventory Domain & Stock Movement Logic', () {
@@ -248,7 +248,6 @@ void main() {
         quantity: 2,
         unitPrice: Money.fromRupees(100),
         recipientType: 'student',
-        studentId: null,
         reason: 'Exam sheet',
         createdBy: 1,
       );

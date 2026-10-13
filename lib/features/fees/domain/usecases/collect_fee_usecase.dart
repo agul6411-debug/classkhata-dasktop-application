@@ -8,8 +8,8 @@ import '../entities/fee_entities.dart';
 import '../repositories/fee_repository.dart';
 
 class CollectFeeUseCase {
-  final FeeRepository _repository;
   const CollectFeeUseCase(this._repository);
+  final FeeRepository _repository;
 
   Future<Result<({Payment payment, Receipt receipt, FeeVoucher updatedVoucher})>> call({
     required Set<Permission> userPermissions,

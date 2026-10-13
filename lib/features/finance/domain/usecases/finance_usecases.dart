@@ -7,8 +7,8 @@ import '../entities/finance_entities.dart';
 import '../repositories/finance_repository.dart';
 
 class RecordExpenseUseCase {
-  final FinanceRepository _repository;
   const RecordExpenseUseCase(this._repository);
+  final FinanceRepository _repository;
 
   Future<Result<Expense>> call({
     required int categoryId,
@@ -37,8 +37,8 @@ class RecordExpenseUseCase {
 }
 
 class DayClosingUseCase {
-  final FinanceRepository _repository;
   const DayClosingUseCase(this._repository);
+  final FinanceRepository _repository;
 
   Future<Result<DayClosing>> call({
     required DateTime date,
@@ -62,8 +62,8 @@ class DayClosingUseCase {
 }
 
 class ProfitLossUseCase {
-  final FinanceRepository _repository;
   const ProfitLossUseCase(this._repository);
+  final FinanceRepository _repository;
 
   Future<Result<ProfitAndLossSummary>> call({
     required DateTime from,

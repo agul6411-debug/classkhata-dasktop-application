@@ -1,4 +1,3 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:classkhata/core/errors/failures.dart';
 import 'package:classkhata/core/money/money.dart';
 import 'package:classkhata/features/academics/domain/entities/academic_entities.dart';
@@ -9,6 +8,7 @@ import 'package:classkhata/features/fees/domain/entities/fee_entities.dart';
 import 'package:classkhata/features/fees/domain/repositories/fee_repository.dart';
 import 'package:classkhata/features/students/domain/entities/student_entities.dart';
 import 'package:classkhata/features/students/domain/repositories/student_repository.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Dashboard KPIs Calculation', () {
@@ -41,12 +41,12 @@ void main() {
     });
 
     test('Handles zero expected total without division by zero', () {
-      final kpis = DashboardKpis(
+      const kpis = DashboardKpis(
         monthYear: '2026-10',
-        expectedTotal: const Money(0),
-        collectedTotal: const Money(0),
-        pendingTotal: const Money(0),
-        overdueTotal: const Money(0),
+        expectedTotal: Money(0),
+        collectedTotal: Money(0),
+        pendingTotal: Money(0),
+        overdueTotal: Money(0),
         studentsCount: 0,
         coursesCount: 0,
         batchesCount: 0,

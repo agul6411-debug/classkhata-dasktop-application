@@ -12,8 +12,6 @@ import 'package:equatable/equatable.dart';
 /// Never create this from a `double`. Use [Money.fromRupees] only for
 /// user-facing input, and prefer [Money.fromPaisa] internally.
 class Money extends Equatable implements Comparable<Money> {
-  /// The value in paisa (smallest unit). Must be non-negative for most uses.
-  final int paisa;
 
   const Money(this.paisa);
 
@@ -28,6 +26,8 @@ class Money extends Equatable implements Comparable<Money> {
 
   /// Creates Money from a paisa integer.
   const factory Money.fromPaisa(int paisa) = Money;
+  /// The value in paisa (smallest unit). Must be non-negative for most uses.
+  final int paisa;
 
   // ---------------------------------------------------------------------------
   // Arithmetic

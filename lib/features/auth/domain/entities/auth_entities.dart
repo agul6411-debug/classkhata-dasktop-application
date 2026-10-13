@@ -5,12 +5,6 @@ import '../../../../core/security/permission_service.dart';
 
 /// An authenticated user session.
 class AuthUser {
-  final int id;
-  final String name;
-  final String email;
-  final AppRole role;
-  final Set<Permission> permissions;
-  final bool mustChangePassword;
 
   const AuthUser({
     required this.id,
@@ -20,6 +14,12 @@ class AuthUser {
     required this.permissions,
     required this.mustChangePassword,
   });
+  final int id;
+  final String name;
+  final String email;
+  final AppRole role;
+  final Set<Permission> permissions;
+  final bool mustChangePassword;
 
   AuthUser copyWith({
     int? id,
@@ -51,15 +51,15 @@ enum LoginResult {
 
 /// Lockout status for a user.
 class LockoutStatus {
-  final bool isLocked;
-  final DateTime? lockedUntil;
-  final int failedAttempts;
 
   const LockoutStatus({
     required this.isLocked,
     this.lockedUntil,
     required this.failedAttempts,
   });
+  final bool isLocked;
+  final DateTime? lockedUntil;
+  final int failedAttempts;
 
   int get minutesRemaining {
     if (lockedUntil == null) return 0;

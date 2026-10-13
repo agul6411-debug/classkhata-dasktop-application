@@ -7,10 +7,10 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-import '../../features/academics/domain/entities/academic_entities.dart';
 import '../../features/fees/domain/entities/fee_entities.dart';
 import '../../features/payroll/domain/entities/payroll_entities.dart';
 import '../../features/students/domain/entities/student_entities.dart';
+import '../constants/payment_modes.dart';
 import '../money/money.dart';
 
 class PdfDocumentService {
@@ -26,6 +26,7 @@ class PdfDocumentService {
     required String voucherNumber,
     String? rollNumber,
     String? batchName,
+    String? paymentMode,
     required String academyName,
     String? academyPhone,
     String? academyAddress,
@@ -87,6 +88,8 @@ class PdfDocumentService {
                   _thermalRow('Roll No:', rollNumber),
                 if (batchName != null && batchName.isNotEmpty)
                   _thermalRow('Class/Batch:', batchName),
+                if (paymentMode != null && paymentMode.isNotEmpty)
+                  _thermalRow('Payment Mode:', PaymentModes.getPdfDisplayName(paymentMode)),
                 pw.Divider(thickness: 0.8),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -171,9 +174,9 @@ class PdfDocumentService {
                       ),
                       pw.Container(
                         padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: pw.BoxDecoration(
+                        decoration: const pw.BoxDecoration(
                           color: PdfColors.green700,
-                          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                          borderRadius: pw.BorderRadius.all(pw.Radius.circular(4)),
                         ),
                         child: pw.Text(
                           'PAID RECEIPT',
@@ -199,6 +202,8 @@ class PdfDocumentService {
                             'Payment Date:',
                             '${receipt.receiptDate.day}/${receipt.receiptDate.month}/${receipt.receiptDate.year}',
                           ),
+                          if (paymentMode != null && paymentMode.isNotEmpty)
+                            _docMetaRow('Payment Mode:', PaymentModes.getPdfDisplayName(paymentMode)),
                         ],
                       ),
                       pw.Column(
@@ -310,7 +315,7 @@ class PdfDocumentService {
                           pw.Container(
                             width: 130,
                             decoration: const pw.BoxDecoration(
-                              border: pw.Border(top: pw.BorderSide(color: PdfColors.grey700, width: 1)),
+                              border: pw.Border(top: pw.BorderSide(color: PdfColors.grey700)),
                             ),
                             padding: const pw.EdgeInsets.only(top: 4),
                             child: pw.Center(
@@ -783,7 +788,7 @@ class PdfDocumentService {
                             '${run.paidAt!.day}/${run.paidAt!.month}/${run.paidAt!.year}',
                           ),
                         if (run.paymentMode != null)
-                          _docMetaRow('Payment Mode:', run.paymentMode!.toUpperCase()),
+                          _docMetaRow('Payment Mode:', PaymentModes.getPdfDisplayName(run.paymentMode)),
                       ],
                     ),
                   ],
@@ -1193,7 +1198,7 @@ class PdfDocumentService {
         pw.Container(
           width: 140,
           decoration: const pw.BoxDecoration(
-            border: pw.Border(top: pw.BorderSide(color: PdfColors.grey700, width: 1)),
+            border: pw.Border(top: pw.BorderSide(color: PdfColors.grey700)),
           ),
           padding: const pw.EdgeInsets.only(top: 4),
           child: pw.Center(

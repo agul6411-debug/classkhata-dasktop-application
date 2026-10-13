@@ -8,8 +8,8 @@ import '../entities/fee_entities.dart';
 import '../repositories/fee_repository.dart';
 
 class GenerateVouchersUseCase {
-  final FeeRepository _repository;
   const GenerateVouchersUseCase(this._repository);
+  final FeeRepository _repository;
 
   Future<Result<int>> call({
     required Set<Permission> userPermissions,
@@ -40,8 +40,8 @@ class GenerateVouchersUseCase {
 }
 
 class FeeApprovalsUseCase {
-  final FeeRepository _repository;
   const FeeApprovalsUseCase(this._repository);
+  final FeeRepository _repository;
 
   /// Submits an approval request (Maker phase) for discount, refund, waiver, or cancellation.
   Future<Result<int>> requestAdjustment({
@@ -75,6 +75,7 @@ class FeeApprovalsUseCase {
     required int reviewerId,
     required bool approve,
     String? reviewerNote,
+    bool allowSingleAdminBypass = false,
   }) async {
     final requiredPerm =
         approve ? Permission.approvalsApprove : Permission.approvalsReject;
@@ -87,8 +88,8 @@ class FeeApprovalsUseCase {
           onSuccess: (_) => const UnexpectedFailure(''), onFailure: (f) => f));
     }
 
-    // Maker cannot be checker
-    if (requestedBy == reviewerId) {
+    // Maker cannot be checker unless single-admin bypass is enabled for solo administrators
+    if (requestedBy == reviewerId && !allowSingleAdminBypass) {
       return const Failure(ValidationFailure(
           'A user cannot approve their own request (maker-checker violation).'));
     }
@@ -103,8 +104,8 @@ class FeeApprovalsUseCase {
 }
 
 class DefaulterAgingUseCase {
-  final FeeRepository _repository;
   const DefaulterAgingUseCase(this._repository);
+  final FeeRepository _repository;
 
   Future<Result<List<DefaulterAgingRecord>>> call({int? batchId}) {
     return _repository.getDefaulterAgingReport(batchId: batchId);

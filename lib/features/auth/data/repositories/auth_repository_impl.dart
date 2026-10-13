@@ -2,10 +2,12 @@
 library;
 
 import 'dart:convert';
+
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
-import '../../../../core/database/app_database.dart';
+
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/database/app_database.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/security/password_hasher.dart';
@@ -15,9 +17,9 @@ import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_dao.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  final AuthDao _dao;
 
   const AuthRepositoryImpl(this._dao);
+  final AuthDao _dao;
 
   @override
   Future<Result<AuthUser>> login({
@@ -123,7 +125,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     try {
       if (newPassword.length < AppConstants.minPasswordLength) {
-        return Failure(
+        return const Failure(
           ValidationFailure(
             'Password must be at least ${AppConstants.minPasswordLength} characters.',
           ),
@@ -141,10 +143,12 @@ class AuthRepositoryImpl implements AuthRepository {
         return const Failure(AuthFailure('Current password is incorrect.'));
       }
       final hashResult = await PasswordHasher.instance.hashPassword(newPassword);
-      if (hashResult.isFailure) return Failure(hashResult.fold(
+      if (hashResult.isFailure) {
+        return Failure(hashResult.fold(
         onSuccess: (_) => const UnexpectedFailure(''),
         onFailure: (f) => f,
       ));
+      }
       await _dao.updateUser(
         userId,
         UsersTableCompanion(
@@ -173,7 +177,7 @@ class AuthRepositoryImpl implements AuthRepository {
       return Success(hash == keyRow.keyHash);
     } catch (e, st) {
       await AppLogger.instance.error('verifyRecoveryKey error', error: e, stack: st);
-      return Failure(UnexpectedFailure('Recovery key verification failed.'));
+      return const Failure(UnexpectedFailure('Recovery key verification failed.'));
     }
   }
 
@@ -195,10 +199,12 @@ class AuthRepositoryImpl implements AuthRepository {
       if (userRow == null) return const Failure(AuthFailure('User not found.'));
 
       final hashResult = await PasswordHasher.instance.hashPassword(newPassword);
-      if (hashResult.isFailure) return Failure(hashResult.fold(
+      if (hashResult.isFailure) {
+        return Failure(hashResult.fold(
         onSuccess: (_) => const UnexpectedFailure(''),
         onFailure: (f) => f,
       ));
+      }
       await _dao.updateUser(
         userRow.id,
         UsersTableCompanion(

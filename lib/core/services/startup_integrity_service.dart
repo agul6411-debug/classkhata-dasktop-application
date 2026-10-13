@@ -15,11 +15,6 @@ import '../logging/app_logger.dart';
 import '../security/audit_chain.dart';
 
 class IntegrityCheckResult {
-  final bool dbHealthy;
-  final bool auditChainHealthy;
-  final bool backupFolderHealthy;
-  final String? userFriendlyMessage;
-  final List<String> technicalDetails;
 
   const IntegrityCheckResult({
     required this.dbHealthy,
@@ -28,15 +23,20 @@ class IntegrityCheckResult {
     this.userFriendlyMessage,
     this.technicalDetails = const [],
   });
+  final bool dbHealthy;
+  final bool auditChainHealthy;
+  final bool backupFolderHealthy;
+  final String? userFriendlyMessage;
+  final List<String> technicalDetails;
 
   bool get isHealthy => dbHealthy && auditChainHealthy && backupFolderHealthy;
 }
 
 class StartupIntegrityService {
-  final AppDatabase _db;
-  final Directory _backupDir;
 
   StartupIntegrityService(this._db, this._backupDir);
+  final AppDatabase _db;
+  final Directory _backupDir;
 
   /// Performs full system integrity checks on app launch.
   Future<IntegrityCheckResult> runStartupChecks() async {

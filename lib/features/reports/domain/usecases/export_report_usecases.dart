@@ -7,8 +7,8 @@ import '../entities/report_entities.dart';
 import '../repositories/reports_repository.dart';
 
 class ExportPdfUseCase {
-  final ReportsRepository _repository;
   const ExportPdfUseCase(this._repository);
+  final ReportsRepository _repository;
 
   Future<Result<List<int>>> call({
     required Set<Permission> userPermissions,
@@ -33,8 +33,8 @@ class ExportPdfUseCase {
 }
 
 class ExportExcelUseCase {
-  final ReportsRepository _repository;
   const ExportExcelUseCase(this._repository);
+  final ReportsRepository _repository;
 
   Future<Result<String>> call({
     required Set<Permission> userPermissions,

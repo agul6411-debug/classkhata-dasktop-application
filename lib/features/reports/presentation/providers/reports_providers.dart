@@ -32,7 +32,7 @@ final selectedReportFilterProvider = StateProvider<ReportFilter>((ref) {
   final now = DateTime.now();
   return ReportFilter(
     reportType: ReportType.feeCollectionSummary,
-    startDate: DateTime(now.year, now.month, 1),
+    startDate: DateTime(now.year, now.month),
     endDate: now,
     monthYear: '${now.year}-${now.month.toString().padLeft(2, '0')}',
   );

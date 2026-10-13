@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../../../core/constants/payment_modes.dart';
 import '../../../../core/money/money.dart';
 import '../../../../core/security/permission_service.dart';
 import '../../../../shared/widgets/app_text_field.dart';
@@ -26,7 +27,7 @@ class _PurchaseFormDialogState extends ConsumerState<PurchaseFormDialog> {
   final _paidCtrl = TextEditingController(text: '0');
   final _notesCtrl = TextEditingController();
   int? _selectedSupplierId;
-  String _paymentMode = 'cash';
+  String _paymentMode = PaymentModes.handCash;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -134,7 +135,6 @@ class _PurchaseFormDialogState extends ConsumerState<PurchaseFormDialog> {
     final itemsAsync = ref.watch(inventoryItemsProvider);
 
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 680),
@@ -148,9 +148,9 @@ class _PurchaseFormDialogState extends ConsumerState<PurchaseFormDialog> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Record Inventory Purchase',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.heading),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.headingCol(context)),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close, size: 20),
@@ -339,12 +339,20 @@ class _PurchaseFormDialogState extends ConsumerState<PurchaseFormDialog> {
                           labelText: 'Payment Mode',
                           border: OutlineInputBorder(),
                         ),
-                        items: const [
-                          DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                          DropdownMenuItem(value: 'bank', child: Text('Bank Transfer')),
-                          DropdownMenuItem(value: 'credit', child: Text('On Credit (Unpaid)')),
+                        items: [
+                          ...PaymentModes.dropdownItems,
+                          const DropdownMenuItem(
+                            value: 'credit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.credit_card_off_outlined, size: 16, color: Colors.purple),
+                                SizedBox(width: 8),
+                                Text('On Credit (ادھار / بعد میں ادائیگی)'),
+                              ],
+                            ),
+                          ),
                         ],
-                        onChanged: (val) => setState(() => _paymentMode = val ?? 'cash'),
+                        onChanged: (val) => setState(() => _paymentMode = val ?? PaymentModes.handCash),
                       ),
                     ),
                   ],

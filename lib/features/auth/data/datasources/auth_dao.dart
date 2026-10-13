@@ -8,9 +8,9 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 
 class AuthDao {
-  final AppDatabase _db;
 
   const AuthDao(this._db);
+  final AppDatabase _db;
 
   /// Returns the user row matching [email], or null.
   Future<UsersTableData?> getUserByEmail(String email) =>

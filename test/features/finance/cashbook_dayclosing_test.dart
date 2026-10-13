@@ -1,6 +1,3 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:drift/native.dart';
-import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:classkhata/core/database/app_database.dart';
 import 'package:classkhata/core/money/money.dart';
 import 'package:classkhata/features/academics/data/datasources/academic_dao.dart';
@@ -13,6 +10,9 @@ import 'package:classkhata/features/finance/data/repositories/finance_repository
 import 'package:classkhata/features/finance/domain/usecases/finance_usecases.dart';
 import 'package:classkhata/features/students/data/datasources/student_dao.dart';
 import 'package:classkhata/features/students/data/repositories/student_repository_impl.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late AppDatabase db;
@@ -40,7 +40,7 @@ void main() {
     await db.into(db.academicSessionsTable).insert(
           AcademicSessionsTableCompanion.insert(
             name: '2026-2027',
-            startDate: DateTime(2026, 1, 1),
+            startDate: DateTime(2026),
             endDate: DateTime(2026, 12, 31),
           ),
         );
@@ -157,7 +157,7 @@ void main() {
     });
 
     test('Profit & Loss summary calculates fee income, expenses and margin', () async {
-      final from = DateTime(2026, 1, 1);
+      final from = DateTime(2026);
       final to = DateTime(2026, 12, 31);
 
       // 1. Generate voucher and collect Rs 5,000 fee

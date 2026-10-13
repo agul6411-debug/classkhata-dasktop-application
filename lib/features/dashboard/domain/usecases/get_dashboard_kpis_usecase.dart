@@ -11,9 +11,6 @@ import '../../../students/domain/repositories/student_repository.dart';
 import '../entities/dashboard_kpis.dart';
 
 class GetDashboardKpisUseCase {
-  final FeeRepository _feeRepo;
-  final StudentRepository _studentRepo;
-  final AcademicRepository _academicRepo;
 
   const GetDashboardKpisUseCase({
     required FeeRepository feeRepo,
@@ -22,6 +19,9 @@ class GetDashboardKpisUseCase {
   })  : _feeRepo = feeRepo,
         _studentRepo = studentRepo,
         _academicRepo = academicRepo;
+  final FeeRepository _feeRepo;
+  final StudentRepository _studentRepo;
+  final AcademicRepository _academicRepo;
 
   Future<Result<DashboardKpis>> call(String monthYear) async {
     // 1. Fetch vouchers for the selected month (gracefully defaults to empty list if none exist or error)
@@ -78,7 +78,6 @@ class GetDashboardKpisUseCase {
         alerts.add(DashboardAlert(
           title: 'Upcoming Due Date',
           message: 'Voucher ${v.voucherNumber} is due in $diff day(s).',
-          severity: 'warning',
         ));
       }
     }

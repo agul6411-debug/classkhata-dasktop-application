@@ -57,8 +57,8 @@ class CalculateSalaryEngine {
 }
 
 class CreateStaffMemberUseCase {
-  final PayrollRepository _repository;
   const CreateStaffMemberUseCase(this._repository);
+  final PayrollRepository _repository;
 
   Future<Result<StaffMember>> call({
     required String name,
@@ -88,8 +88,8 @@ class CreateStaffMemberUseCase {
 }
 
 class RunMonthlyPayrollUseCase {
-  final PayrollRepository _repository;
   const RunMonthlyPayrollUseCase(this._repository);
+  final PayrollRepository _repository;
 
   Future<Result<int>> call({
     required Set<Permission> userPermissions,
@@ -116,8 +116,8 @@ class RunMonthlyPayrollUseCase {
 }
 
 class PaySalaryUseCase {
-  final PayrollRepository _repository;
   const PaySalaryUseCase(this._repository);
+  final PayrollRepository _repository;
 
   Future<Result<void>> call({
     required Set<Permission> userPermissions,

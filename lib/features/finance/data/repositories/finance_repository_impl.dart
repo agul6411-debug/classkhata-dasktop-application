@@ -11,8 +11,8 @@ import '../../domain/repositories/finance_repository.dart';
 import '../datasources/finance_dao.dart';
 
 class FinanceRepositoryImpl implements FinanceRepository {
-  final FinanceDao _dao;
   const FinanceRepositoryImpl(this._dao);
+  final FinanceDao _dao;
 
   @override
   Future<Result<List<ExpenseCategory>>> getExpenseCategories() async {
@@ -56,7 +56,7 @@ class FinanceRepositoryImpl implements FinanceRepository {
     try {
       final rows = await _dao.getExpenses(from: from, to: to);
       final categories = await _dao.getCategories();
-      final catMap = {for (var c in categories) c.id: c.name};
+      final catMap = {for (final c in categories) c.id: c.name};
 
       final list = rows.map((r) => Expense(
             id: r.id,

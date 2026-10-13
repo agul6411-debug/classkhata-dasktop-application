@@ -1,8 +1,8 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:drift/native.dart';
-import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:classkhata/core/database/app_database.dart';
 import 'package:classkhata/features/inventory/data/datasources/inventory_dao.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late AppDatabase db;
@@ -94,14 +94,13 @@ void main() {
 
       // Attempting to issue 10 units when only 5 are available should throw
       expect(
-        () async => await inventoryDao.recordMovementTransaction(
+        () async => inventoryDao.recordMovementTransaction(
           itemId: itemId,
           movementType: 'out',
           quantity: 10,
           unitCostPaisa: 2000,
           reason: 'Excess issue test',
           createdBy: 1,
-          allowNegativeStock: false,
         ),
         throwsA(isA<Exception>()),
       );
@@ -189,7 +188,7 @@ void main() {
       final sessionId = await db.into(db.academicSessionsTable).insert(
             AcademicSessionsTableCompanion.insert(
               name: '2026-2027',
-              startDate: DateTime(2026, 1, 1),
+              startDate: DateTime(2026),
               endDate: DateTime(2026, 12, 31),
               createdBy: const Value(1),
             ),
@@ -229,7 +228,7 @@ void main() {
               studentId: studentId,
               batchId: batchId,
               monthYear: '2026-10',
-              issueDate: DateTime(2026, 10, 1),
+              issueDate: DateTime(2026, 10),
               dueDate: DateTime(2026, 10, 10),
               baseAmountPaisa: const Value(500000),
               totalDuePaisa: const Value(500000),

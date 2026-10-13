@@ -1,6 +1,8 @@
 /// Comprehensive Settings & System Management Screen.
 library;
 
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -198,45 +200,58 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    // Populate profile controllers if loaded
+    final theme = ref.watch(themeModeNotifierProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.surface;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.border;
+    final headingColor = isDark ? AppColors.darkTextPrimary : AppColors.heading;
+    final textColor = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    final textMutedColor = isDark ? AppColors.darkTextSecondary : AppColors.textMuted;
+
+    // Safely populate profile controllers on external update
     ref.listen(academyProfileProvider, (_, next) {
       next.whenData((profile) {
         if (profile != null) {
-          _nameCtrl.text = profile.name;
-          _taglineCtrl.text = profile.tagline ?? '';
-          _phoneCtrl.text = profile.phone ?? '';
-          _addressCtrl.text = profile.address ?? '';
-          _logoCtrl.text = profile.logoPath ?? '';
+          if (_nameCtrl.text.isEmpty) _nameCtrl.text = profile.name;
+          if (_taglineCtrl.text.isEmpty) _taglineCtrl.text = profile.tagline ?? '';
+          if (_phoneCtrl.text.isEmpty) _phoneCtrl.text = profile.phone ?? '';
+          if (_addressCtrl.text.isEmpty) _addressCtrl.text = profile.address ?? '';
+          if (_logoCtrl.text.isEmpty) _logoCtrl.text = profile.logoPath ?? '';
         }
       });
     });
 
+    // Safely populate settings without mid-build state mutations
     ref.listen(appSettingsMapProvider, (_, next) {
       next.whenData((map) {
-        setState(() {
-          _dueDay = int.tryParse(map['fee_due_day'] ?? '10') ?? 10;
-          _siblingDiscount = map['sibling_discount_enabled'] == 'true';
-          _lateFee = map['late_fee_enabled'] == 'true';
-          _allowNegativeStock = map['allow_negative_stock'] == 'true';
-          _autoLockMinutes = int.tryParse(map['auto_lock_minutes'] ?? '10') ?? 10;
-          _makerCheckerThreshold = int.tryParse(map['maker_checker_threshold'] ?? '5000') ?? 5000;
-          _autoBackupDaily = map['auto_backup_enabled'] != 'false';
-          _backupRetention = int.tryParse(map['backup_retention_count'] ?? '7') ?? 7;
-          _receiptStyle = map['receipt_style'] ?? 'a4';
-          if (_waTemplateCtrl.text.isEmpty) {
-            _waTemplateCtrl.text = map['whatsapp_reminder_template'] ??
-                'Dear Parent, fee voucher for {student} of Rs. {amount} is due by {due_date}. Thank you, {academy}.';
-          }
-          if (_receiptFooterCtrl.text.isEmpty) {
-            _receiptFooterCtrl.text = map['receipt_footer_note'] ?? 'Fee once paid is non-refundable. Thank you!';
-          }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          setState(() {
+            _dueDay = int.tryParse(map['fee_due_day'] ?? '10') ?? 10;
+            _siblingDiscount = map['sibling_discount_enabled'] == 'true';
+            _lateFee = map['late_fee_enabled'] == 'true';
+            _allowNegativeStock = map['allow_negative_stock'] == 'true';
+            _autoLockMinutes = int.tryParse(map['auto_lock_minutes'] ?? '10') ?? 10;
+            _makerCheckerThreshold = int.tryParse(map['maker_checker_threshold'] ?? '5000') ?? 5000;
+            _autoBackupDaily = map['auto_backup_enabled'] != 'false';
+            _backupRetention = int.tryParse(map['backup_retention_count'] ?? '7') ?? 7;
+            _receiptStyle = map['receipt_style'] ?? 'a4';
+            if (_waTemplateCtrl.text.isEmpty) {
+              _waTemplateCtrl.text = map['whatsapp_reminder_template'] ??
+                  'Dear Parent, fee voucher for {student} of Rs. {amount} is due by {due_date}. Thank you, {academy}.';
+            }
+            if (_receiptFooterCtrl.text.isEmpty) {
+              _receiptFooterCtrl.text = map['receipt_footer_note'] ?? 'Fee once paid is non-refundable. Thank you!';
+            }
+          });
         });
       });
     });
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Padding(
+    return ColoredBox(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -245,17 +260,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Settings & System Management',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.heading),
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: headingColor),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       'Academy profile, policies, templates, encrypted backups, and offline licensing.',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      style: TextStyle(color: textMutedColor, fontSize: 13),
                     ),
                   ],
                 ),
@@ -270,14 +285,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
 
             // Tab bar
             Container(
-              decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
+              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: borderColor))),
               child: TabBar(
                 controller: _tabController,
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
-                labelColor: AppColors.accent,
-                unselectedLabelColor: AppColors.textSecondary,
-                indicatorColor: AppColors.accent,
+                labelColor: isDark ? AppColors.accentLight : AppColors.accent,
+                unselectedLabelColor: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                indicatorColor: isDark ? AppColors.accentLight : AppColors.accent,
                 indicatorWeight: 3,
                 tabs: const [
                   Tab(text: 'Academy Profile'),
@@ -299,16 +314,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.teal.shade50,
+                    color: isDark ? Colors.teal.shade900.withValues(alpha: 0.35) : Colors.teal.shade50,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.teal.shade200),
+                    border: Border.all(color: Colors.teal.shade300),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle, color: AppColors.accent, size: 20),
+                      const Icon(Icons.check_circle, color: AppColors.paid, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(_statusMessage!, style: TextStyle(color: Colors.teal.shade900, fontSize: 13)),
+                        child: Text(
+                          _statusMessage!,
+                          style: TextStyle(
+                            color: isDark ? Colors.teal.shade200 : Colors.teal.shade900,
+                            fontSize: 13,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -316,18 +337,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
               const SizedBox(height: 12),
             ],
 
-            // Tab Views
+            // Tab Views: Keyed with theme mode to cleanly reset renderers on theme switch
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildProfileTab(),
-                  _buildPoliciesTab(),
-                  _buildTemplatesTab(),
-                  _buildBackupsTab(),
-                  _buildLicensingTab(),
-                  _buildPreferencesTab(),
-                ],
+              child: KeyedSubtree(
+                key: ValueKey('settings_tabs_tree_$theme'),
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildProfileTab(surfaceColor, borderColor, headingColor, textColor, textMutedColor),
+                    _buildPoliciesTab(surfaceColor, borderColor, headingColor, textColor, textMutedColor),
+                    _buildTemplatesTab(surfaceColor, borderColor, headingColor, textColor, textMutedColor),
+                    _buildBackupsTab(surfaceColor, borderColor, headingColor, textColor, textMutedColor),
+                    _buildLicensingTab(surfaceColor, borderColor, headingColor, textColor, textMutedColor),
+                    _buildPreferencesTab(surfaceColor, borderColor, headingColor, textColor, textMutedColor),
+                  ],
+                ),
               ),
             ),
           ],
@@ -339,23 +363,29 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
   // ---------------------------------------------------------------------------
   // Tab 1: Academy Profile
   // ---------------------------------------------------------------------------
-  Widget _buildProfileTab() {
+  Widget _buildProfileTab(
+    Color surfaceColor,
+    Color borderColor,
+    Color headingColor,
+    Color textColor,
+    Color textMutedColor,
+  ) {
     return SingleChildScrollView(
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 650),
+        constraints: const BoxConstraints(maxWidth: 700),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: surfaceColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: borderColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Academy Profile & Receipt Header', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('Academy Profile & Receipt Header', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: headingColor)),
             const SizedBox(height: 4),
-            const Text('Displayed on all student fee receipts, cards, and reports.', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-            const Divider(height: 24),
+            Text('Displayed on all student fee receipts, cards, and reports.', style: TextStyle(color: textMutedColor, fontSize: 12)),
+            Divider(height: 24, color: borderColor),
             AppTextField(controller: _nameCtrl, label: 'Academy / School Name *'),
             const SizedBox(height: 12),
             AppTextField(controller: _taglineCtrl, label: 'Tagline / Motto (Optional)'),
@@ -363,8 +393,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
             AppTextField(controller: _phoneCtrl, label: 'Official Contact Phone'),
             const SizedBox(height: 12),
             AppTextField(controller: _addressCtrl, label: 'Official Campus Address'),
-            const SizedBox(height: 12),
-            AppTextField(controller: _logoCtrl, label: 'Academy Logo File Path (Optional)'),
+            const SizedBox(height: 18),
+
+            // Interactive School Logo Section
+            _buildLogoSection(surfaceColor, borderColor, textColor, textMutedColor),
+
             const SizedBox(height: 24),
             Align(
               alignment: Alignment.centerRight,
@@ -380,31 +413,189 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
     );
   }
 
+  Widget _buildLogoSection(Color surfaceColor, Color borderColor, Color textColor, Color textMutedColor) {
+    final currentPath = _logoCtrl.text.trim();
+    final hasValidFile = currentPath.isNotEmpty && File(currentPath).existsSync();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkBackground : AppColors.inputFill,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.photo_library_outlined, size: 18, color: AppColors.accent),
+              const SizedBox(width: 8),
+              Text(
+                'School / Academy Logo (اسکول کا لوگو)',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: textColor),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Select your school logo image from your computer. It will appear on Fee Vouchers, Receipts, and the application header.',
+            style: TextStyle(color: textMutedColor, fontSize: 11.5),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              // Image Thumbnail Box
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurface : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: borderColor, width: 1.5),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: hasValidFile
+                    ? Image.file(
+                        File(currentPath),
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Center(
+                          child: Icon(Icons.broken_image_outlined, color: textMutedColor, size: 30),
+                        ),
+                      )
+                    : Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.school_outlined, size: 32, color: textMutedColor.withValues(alpha: 0.6)),
+                            const SizedBox(height: 4),
+                            Text(
+                              'No Logo',
+                              style: TextStyle(fontSize: 10, color: textMutedColor),
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 16),
+
+              // Action buttons & File path display
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.folder_open, size: 18),
+                          label: const Text('Browse Logo (لوگو منتخب کریں)'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          ),
+                          onPressed: () async {
+                            try {
+                              final result = await FilePicker.pickFiles(
+                                type: FileType.custom,
+                                allowedExtensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp'],
+                                dialogTitle: 'Select School Logo (اسکول کا لوگو منتخب کریں)',
+                              );
+                              if (result != null && result.files.single.path != null) {
+                                setState(() {
+                                  _logoCtrl.text = result.files.single.path!;
+                                });
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('File selection error: $e'), backgroundColor: Colors.red),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                        if (currentPath.isNotEmpty)
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.overdue),
+                            label: const Text('Remove (ہٹائیں)', style: TextStyle(color: AppColors.overdue)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppColors.overdue),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _logoCtrl.clear();
+                              });
+                            },
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (currentPath.isNotEmpty)
+                      Row(
+                        children: [
+                          const Icon(Icons.check_circle_outline, size: 14, color: AppColors.paid),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              currentPath,
+                              style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: textColor),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Text(
+                        'Supports PNG, JPG, or JPEG format (transparent PNG recommended).',
+                        style: TextStyle(fontSize: 11, color: textMutedColor),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Tab 2: Policies & Security
   // ---------------------------------------------------------------------------
-  Widget _buildPoliciesTab() {
+  Widget _buildPoliciesTab(
+    Color surfaceColor,
+    Color borderColor,
+    Color headingColor,
+    Color textColor,
+    Color textMutedColor,
+  ) {
     return SingleChildScrollView(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 650),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: surfaceColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: borderColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Operational & Financial Rules', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const Divider(height: 24),
+            Text('Operational & Financial Rules', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: headingColor)),
+            Divider(height: 24, color: borderColor),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Default Fee Due Day of Month'),
-              subtitle: const Text('Day between 1 and 28 assigned to newly generated vouchers.'),
+              title: Text('Default Fee Due Day of Month', style: TextStyle(color: textColor)),
+              subtitle: Text('Day between 1 and 28 assigned to newly generated vouchers.', style: TextStyle(color: textMutedColor, fontSize: 12)),
               trailing: DropdownButton<int>(
                 value: _dueDay,
-                items: List.generate(28, (i) => i + 1).map((d) => DropdownMenuItem(value: d, child: Text('Day $d'))).toList(),
+                dropdownColor: surfaceColor,
+                items: List.generate(28, (i) => i + 1).map((d) => DropdownMenuItem(value: d, child: Text('Day $d', style: TextStyle(color: textColor)))).toList(),
                 onChanged: (val) {
                   if (val != null) {
                     setState(() => _dueDay = val);
@@ -413,51 +604,52 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                 },
               ),
             ),
-            const Divider(),
+            Divider(color: borderColor),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Sibling / Family Discounts'),
-              subtitle: const Text('Automatically apply configured concessions for linked sibling students.'),
+              title: Text('Sibling / Family Discounts', style: TextStyle(color: textColor)),
+              subtitle: Text('Automatically apply configured concessions for linked sibling students.', style: TextStyle(color: textMutedColor, fontSize: 12)),
               value: _siblingDiscount,
               onChanged: (val) {
                 setState(() => _siblingDiscount = val);
                 _savePolicy('sibling_discount_enabled', val.toString());
               },
             ),
-            const Divider(),
+            Divider(color: borderColor),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Late Fee Fines'),
-              subtitle: const Text('Automatically assess overdue penalties after the due day expires.'),
+              title: Text('Late Fee Fines', style: TextStyle(color: textColor)),
+              subtitle: Text('Automatically assess overdue penalties after the due day expires.', style: TextStyle(color: textMutedColor, fontSize: 12)),
               value: _lateFee,
               onChanged: (val) {
                 setState(() => _lateFee = val);
                 _savePolicy('late_fee_enabled', val.toString());
               },
             ),
-            const Divider(),
+            Divider(color: borderColor),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Allow Negative Inventory Stock'),
-              subtitle: const Text('Permit item stock issuance even when current physical balance is zero.'),
+              title: Text('Allow Negative Inventory Stock', style: TextStyle(color: textColor)),
+              subtitle: Text('Permit item stock issuance even when current physical balance is zero.', style: TextStyle(color: textMutedColor, fontSize: 12)),
               value: _allowNegativeStock,
               onChanged: (val) {
                 setState(() => _allowNegativeStock = val);
                 _savePolicy('allow_negative_stock', val.toString());
               },
             ),
-            const Divider(),
+            Divider(color: borderColor),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Auto-Lock Inactivity Timer'),
-              subtitle: const Text('Automatically lock current screen after period of inactivity.'),
+              title: Text('Auto-Lock Inactivity Timer', style: TextStyle(color: textColor)),
+              subtitle: Text('Automatically lock current screen after period of inactivity.', style: TextStyle(color: textMutedColor, fontSize: 12)),
               trailing: DropdownButton<int>(
                 value: _autoLockMinutes,
-                items: const [
-                  DropdownMenuItem(value: 5, child: Text('5 Minutes')),
-                  DropdownMenuItem(value: 10, child: Text('10 Minutes')),
-                  DropdownMenuItem(value: 15, child: Text('15 Minutes')),
-                  DropdownMenuItem(value: 30, child: Text('30 Minutes')),
+                dropdownColor: surfaceColor,
+                items: [
+                  DropdownMenuItem(value: 5, child: Text('5 Minutes', style: TextStyle(color: textColor))),
+                  DropdownMenuItem(value: 10, child: Text('10 Minutes', style: TextStyle(color: textColor))),
+                  DropdownMenuItem(value: 15, child: Text('15 Minutes', style: TextStyle(color: textColor))),
+                  DropdownMenuItem(value: 30, child: Text('30 Minutes', style: TextStyle(color: textColor))),
                 ],
                 onChanged: (val) {
                   if (val != null) {
@@ -467,18 +659,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                 },
               ),
             ),
-            const Divider(),
+            Divider(color: borderColor),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Maker-Checker Approval Limit'),
-              subtitle: const Text('Discounts, waivers, refunds, and shrinkage adjustments above this require admin approval.'),
+              title: Text('Maker-Checker Approval Limit', style: TextStyle(color: textColor)),
+              subtitle: Text('Discounts, waivers, refunds, and shrinkage adjustments above this require admin approval.', style: TextStyle(color: textMutedColor, fontSize: 12)),
               trailing: DropdownButton<int>(
                 value: _makerCheckerThreshold,
-                items: const [
-                  DropdownMenuItem(value: 1000, child: Text('Rs. 1,000')),
-                  DropdownMenuItem(value: 2500, child: Text('Rs. 2,500')),
-                  DropdownMenuItem(value: 5000, child: Text('Rs. 5,000')),
-                  DropdownMenuItem(value: 10000, child: Text('Rs. 10,000')),
+                dropdownColor: surfaceColor,
+                items: [
+                  DropdownMenuItem(value: 1000, child: Text('Rs. 1,000', style: TextStyle(color: textColor))),
+                  DropdownMenuItem(value: 2500, child: Text('Rs. 2,500', style: TextStyle(color: textColor))),
+                  DropdownMenuItem(value: 5000, child: Text('Rs. 5,000', style: TextStyle(color: textColor))),
+                  DropdownMenuItem(value: 10000, child: Text('Rs. 10,000', style: TextStyle(color: textColor))),
                 ],
                 onChanged: (val) {
                   if (val != null) {
@@ -497,24 +690,30 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
   // ---------------------------------------------------------------------------
   // Tab 3: Templates & Messaging
   // ---------------------------------------------------------------------------
-  Widget _buildTemplatesTab() {
+  Widget _buildTemplatesTab(
+    Color surfaceColor,
+    Color borderColor,
+    Color headingColor,
+    Color textColor,
+    Color textMutedColor,
+  ) {
     return SingleChildScrollView(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 650),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: surfaceColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: borderColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Messaging & Receipt Templates', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('Messaging & Receipt Templates', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: headingColor)),
             const SizedBox(height: 4),
-            const Text('Customize WhatsApp reminder messages and receipt presentation.', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-            const Divider(height: 24),
-            const Text('WhatsApp Reminder Message Template', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            Text('Customize WhatsApp reminder messages and receipt presentation.', style: TextStyle(color: textMutedColor, fontSize: 12)),
+            Divider(height: 24, color: borderColor),
+            Text('WhatsApp Reminder Message Template', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: textColor)),
             const SizedBox(height: 6),
             AppTextField(
               controller: _waTemplateCtrl,
@@ -531,16 +730,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                 Chip(label: Text('{academy}', style: TextStyle(fontSize: 11))),
               ],
             ),
-            const Divider(height: 24),
+            Divider(height: 24, color: borderColor),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Default Fee Receipt Format'),
-              subtitle: const Text('Preferred printing layout for generated receipts.'),
+              title: Text('Default Fee Receipt Format', style: TextStyle(color: textColor)),
+              subtitle: Text('Preferred printing layout for generated receipts.', style: TextStyle(color: textMutedColor, fontSize: 12)),
               trailing: DropdownButton<String>(
                 value: _receiptStyle,
-                items: const [
-                  DropdownMenuItem(value: 'a4', child: Text('A4 Portrait (Standard)')),
-                  DropdownMenuItem(value: 'thermal', child: Text('Thermal 80mm Roll')),
+                dropdownColor: surfaceColor,
+                items: [
+                  DropdownMenuItem(value: 'a4', child: Text('A4 Portrait (Standard)', style: TextStyle(color: textColor))),
+                  DropdownMenuItem(value: 'thermal', child: Text('Thermal 80mm Roll', style: TextStyle(color: textColor))),
                 ],
                 onChanged: (val) {
                   if (val != null) {
@@ -573,7 +773,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
   // ---------------------------------------------------------------------------
   // Tab 4: Backups & Recovery
   // ---------------------------------------------------------------------------
-  Widget _buildBackupsTab() {
+  Widget _buildBackupsTab(
+    Color surfaceColor,
+    Color borderColor,
+    Color headingColor,
+    Color textColor,
+    Color textMutedColor,
+  ) {
     final backupsAsync = ref.watch(backupsListProvider);
 
     return Column(
@@ -582,14 +788,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
           padding: const EdgeInsets.all(16),
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: surfaceColor,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: borderColor),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
                 children: [
                   Switch(
                     value: _autoBackupDaily,
@@ -598,17 +806,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                       _savePolicy('auto_backup_enabled', val.toString());
                     },
                   ),
-                  const SizedBox(width: 8),
-                  const Text('Automatic Daily Backup', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(width: 24),
-                  const Text('Retention: Keep Last', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                  const SizedBox(width: 8),
+                  Text('Automatic Daily Backup', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)),
+                  const SizedBox(width: 16),
+                  Text('Retention: Keep Last', style: TextStyle(fontSize: 13, color: textMutedColor)),
                   DropdownButton<int>(
                     value: _backupRetention,
-                    items: const [
-                      DropdownMenuItem(value: 7, child: Text('7 Backups')),
-                      DropdownMenuItem(value: 14, child: Text('14 Backups')),
-                      DropdownMenuItem(value: 30, child: Text('30 Backups')),
+                    dropdownColor: surfaceColor,
+                    items: [
+                      DropdownMenuItem(value: 7, child: Text('7 Backups', style: TextStyle(color: textColor))),
+                      DropdownMenuItem(value: 14, child: Text('14 Backups', style: TextStyle(color: textColor))),
+                      DropdownMenuItem(value: 30, child: Text('30 Backups', style: TextStyle(color: textColor))),
                     ],
                     onChanged: (val) {
                       if (val != null) {
@@ -631,91 +838,97 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: surfaceColor,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: borderColor),
             ),
             child: backupsAsync.when(
               data: (backups) {
                 if (backups.isEmpty) {
-                  return const Center(
-                    child: Text('No backup files created yet.', style: TextStyle(color: AppColors.textMuted)),
+                  return Center(
+                    child: Text('No backup files created yet.', style: TextStyle(color: textMutedColor)),
                   );
                 }
 
                 return SingleChildScrollView(
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('Timestamp', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Type', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Size', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Checksum', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
-                    ],
-                    rows: backups.map((b) {
-                      return DataRow(
-                        cells: [
-                          DataCell(Text('${b.createdAt.day}/${b.createdAt.month}/${b.createdAt.year} ${b.createdAt.hour}:${b.createdAt.minute.toString().padLeft(2, '0')}')),
-                          DataCell(Text(b.type.toUpperCase())),
-                          DataCell(Text('${(b.sizeBytes / 1024).toStringAsFixed(1)} KB')),
-                          DataCell(Text(b.checksum.substring(0, 10) + '...', style: const TextStyle(fontFamily: 'monospace'))),
-                          DataCell(StatusBadge(
-                            label: b.isVerified ? 'VERIFIED' : 'PENDING CHECK',
-                            type: b.isVerified ? StatusBadgeType.paid : StatusBadgeType.pending,
-                          )),
-                          DataCell(
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TextButton(
-                                  child: const Text('Verify'),
-                                  onPressed: () async {
-                                    final repo = ref.read(backupRepositoryProvider);
-                                    final res = await repo.verifyBackup(b.id);
-                                    ref.invalidate(backupsListProvider);
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(res.valueOrThrow ? 'Checksum verified: File intact.' : 'Checksum verification FAILED.'),
-                                          backgroundColor: res.valueOrThrow ? Colors.teal : Colors.red,
-                                        ),
-                                      );
-                                    }
-                                  },
-                                ),
-                                const SizedBox(width: 4),
-                                TextButton(
-                                  child: const Text('Test Restore', style: TextStyle(color: Colors.blueAccent)),
-                                  onPressed: () async {
-                                    final scheduler = ref.read(backupSchedulerServiceProvider);
-                                    final res = await scheduler.testRestoreBackup(b.id);
-                                    if (mounted) {
-                                      res.fold(
-                                        onSuccess: (TestRestoreResult tr) => ScaffoldMessenger.of(context).showSnackBar(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      columns: const [
+                        DataColumn(label: Text('Timestamp', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Type', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Size', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Checksum', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
+                      ],
+                      rows: backups.map((b) {
+                        return DataRow(
+                          cells: [
+                            DataCell(Text(
+                              '${b.createdAt.day}/${b.createdAt.month}/${b.createdAt.year} ${b.createdAt.hour}:${b.createdAt.minute.toString().padLeft(2, '0')}',
+                              style: TextStyle(color: textColor),
+                            )),
+                            DataCell(Text(b.type.toUpperCase(), style: TextStyle(color: textColor))),
+                            DataCell(Text('${(b.sizeBytes / 1024).toStringAsFixed(1)} KB', style: TextStyle(color: textColor))),
+                            DataCell(Text('${b.checksum.substring(0, 10)}...', style: TextStyle(fontFamily: 'monospace', color: textColor))),
+                            DataCell(StatusBadge(
+                              label: b.isVerified ? 'VERIFIED' : 'PENDING CHECK',
+                              type: b.isVerified ? StatusBadgeType.paid : StatusBadgeType.pending,
+                            )),
+                            DataCell(
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextButton(
+                                    child: const Text('Verify'),
+                                    onPressed: () async {
+                                      final repo = ref.read(backupRepositoryProvider);
+                                      final res = await repo.verifyBackup(b.id);
+                                      ref.invalidate(backupsListProvider);
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
-                                            content: Text('Test restore passed: ${tr.recordsCount} student records verified in isolated sandbox.'),
-                                            backgroundColor: Colors.teal,
+                                            content: Text(res.valueOrThrow ? 'Checksum verified: File intact.' : 'Checksum verification FAILED.'),
+                                            backgroundColor: res.valueOrThrow ? Colors.teal : Colors.red,
                                           ),
-                                        ),
-                                        onFailure: (AppFailure f) => ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Test restore error: ${f.message}'), backgroundColor: Colors.red),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                ),
-                                const SizedBox(width: 4),
-                                TextButton(
-                                  child: const Text('Restore', style: TextStyle(color: Colors.redAccent)),
-                                  onPressed: () => _confirmRestore(b.id),
-                                ),
-                              ],
+                                        );
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
+                                  TextButton(
+                                    child: const Text('Test Restore', style: TextStyle(color: Colors.blueAccent)),
+                                    onPressed: () async {
+                                      final scheduler = ref.read(backupSchedulerServiceProvider);
+                                      final res = await scheduler.testRestoreBackup(b.id);
+                                      if (mounted) {
+                                        res.fold(
+                                          onSuccess: (TestRestoreResult tr) => ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Test restore passed: ${tr.recordsCount} student records verified in sandbox.'),
+                                              backgroundColor: Colors.teal,
+                                            ),
+                                          ),
+                                          onFailure: (AppFailure f) => ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Test restore error: ${f.message}'), backgroundColor: Colors.red),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
+                                  TextButton(
+                                    child: const Text('Restore', style: TextStyle(color: Colors.redAccent)),
+                                    onPressed: () => _confirmRestore(b.id),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      );
-                    }).toList(),
+                          ],
+                        );
+                      }).toList(),
+                    ),
                   ),
                 );
               },
@@ -773,17 +986,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
   // ---------------------------------------------------------------------------
   // Tab 5: Licensing & Activation
   // ---------------------------------------------------------------------------
-  Widget _buildLicensingTab() {
+  Widget _buildLicensingTab(
+    Color surfaceColor,
+    Color borderColor,
+    Color headingColor,
+    Color textColor,
+    Color textMutedColor,
+  ) {
     final licenseAsync = ref.watch(licenseInfoProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 650),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: surfaceColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: borderColor),
         ),
         child: licenseAsync.when(
           data: (info) {
@@ -793,7 +1013,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('ClassKhata Offline Licensing', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text('ClassKhata Offline Licensing', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: headingColor)),
                     StatusBadge(
                       label: info.status.name.toUpperCase(),
                       type: info.isActivated ? StatusBadgeType.paid : (info.isReadonly ? StatusBadgeType.overdue : StatusBadgeType.pending),
@@ -801,29 +1021,29 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                   ],
                 ),
                 const SizedBox(height: 4),
-                const Text('Fully offline RSA-2048 cryptographically verified license.', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                const Divider(height: 24),
+                Text('Fully offline RSA-2048 cryptographically verified license.', style: TextStyle(color: textMutedColor, fontSize: 12)),
+                Divider(height: 24, color: borderColor),
 
                 // Machine ID container
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.inputFill,
+                    color: isDark ? AppColors.darkBackground : AppColors.inputFill,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: borderColor),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.computer, size: 22, color: AppColors.heading),
+                      Icon(Icons.computer, size: 22, color: headingColor),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Hardware Machine ID:', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                            Text('Hardware Machine ID:', style: TextStyle(fontSize: 11, color: textMutedColor)),
                             SelectableText(
                               info.machineId,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1, color: textColor),
                             ),
                           ],
                         ),
@@ -845,17 +1065,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
 
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('License Status'),
+                  title: Text('License Status', style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
                   subtitle: Text(
                     info.isActivated
                         ? 'Lifetime Permanent License Active (${info.academyName ?? "Registered"})'
                         : (info.isReadonly ? 'Trial Expired — System in Read-Only mode' : 'Free Trial: ${info.daysRemaining} days remaining'),
+                    style: TextStyle(color: textMutedColor, fontSize: 12),
                   ),
                   trailing: info.isActivated
-                      ? const Icon(Icons.check_circle, color: AppColors.accent, size: 28)
+                      ? const Icon(Icons.check_circle, color: AppColors.paid, size: 28)
                       : null,
                 ),
-                const Divider(),
+                Divider(color: borderColor),
 
                 if (!info.isActivated) ...[
                   const SizedBox(height: 12),
@@ -883,7 +1104,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
   // ---------------------------------------------------------------------------
   // Tab 6: Display & Preferences
   // ---------------------------------------------------------------------------
-  Widget _buildPreferencesTab() {
+  Widget _buildPreferencesTab(
+    Color surfaceColor,
+    Color borderColor,
+    Color headingColor,
+    Color textColor,
+    Color textMutedColor,
+  ) {
     final locale = ref.watch(localeNotifierProvider);
     final theme = ref.watch(themeModeNotifierProvider);
 
@@ -892,48 +1119,60 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
         constraints: const BoxConstraints(maxWidth: 650),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: surfaceColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: borderColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('UI Display & Localization', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const Divider(height: 24),
+            Text('UI Display & Localization', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: headingColor)),
+            Divider(height: 24, color: borderColor),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Language / زبان'),
-              subtitle: const Text('English (LTR) or Urdu (اردو RTL) UI.'),
+              title: Text('Language / زبان', style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+              subtitle: Text('English (LTR) or Urdu (اردو RTL) UI.', style: TextStyle(color: textMutedColor, fontSize: 12)),
               trailing: SegmentedButton<String>(
                 segments: const [
                   ButtonSegment(value: 'en', label: Text('English')),
                   ButtonSegment(value: 'ur', label: Text('اردو')),
                 ],
                 selected: {locale},
-                onSelectionChanged: (s) => ref.read(localeNotifierProvider.notifier).setLocale(s.first),
+                onSelectionChanged: (s) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      ref.read(localeNotifierProvider.notifier).setLocale(s.first);
+                    }
+                  });
+                },
               ),
             ),
-            const Divider(),
+            Divider(color: borderColor),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Theme Mode'),
-              subtitle: const Text('Switch between Light and Dark interface.'),
+              title: Text('Theme Mode', style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+              subtitle: Text('Switch between Light and Dark interface.', style: TextStyle(color: textMutedColor, fontSize: 12)),
               trailing: SegmentedButton<String>(
                 segments: const [
                   ButtonSegment(value: 'light', label: Text('Light')),
                   ButtonSegment(value: 'dark', label: Text('Dark')),
                 ],
                 selected: {theme},
-                onSelectionChanged: (s) => ref.read(themeModeNotifierProvider.notifier).setTheme(s.first),
+                onSelectionChanged: (s) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      ref.read(themeModeNotifierProvider.notifier).setTheme(s.first);
+                    }
+                  });
+                },
               ),
             ),
-            const Divider(height: 32),
+            Divider(height: 32, color: borderColor),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.logout, color: Colors.redAccent),
               title: const Text('Sign Out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-              subtitle: const Text('Lock current workstation session.'),
+              subtitle: Text('Lock current workstation session.', style: TextStyle(color: textMutedColor, fontSize: 12)),
               onTap: () => ref.read(authSessionNotifierProvider.notifier).logout(),
             ),
           ],

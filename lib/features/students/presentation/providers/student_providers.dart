@@ -39,15 +39,15 @@ final bulkImportStudentsUseCaseProvider = Provider<BulkImportStudentsUseCase>((r
 
 /// Search & Filter criteria for the students list.
 class StudentFilterState {
-  final int? batchId;
-  final String query;
-  final StudentStatus? status;
 
   const StudentFilterState({
     this.batchId,
     this.query = '',
     this.status,
   });
+  final int? batchId;
+  final String query;
+  final StudentStatus? status;
 
   StudentFilterState copyWith({
     int? Function()? batchId,

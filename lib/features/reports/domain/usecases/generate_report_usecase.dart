@@ -7,8 +7,8 @@ import '../entities/report_entities.dart';
 import '../repositories/reports_repository.dart';
 
 class GenerateReportUseCase {
-  final ReportsRepository _repository;
   const GenerateReportUseCase(this._repository);
+  final ReportsRepository _repository;
 
   Future<Result<ReportData>> call({
     required Set<Permission> userPermissions,

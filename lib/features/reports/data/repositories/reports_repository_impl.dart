@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../../../../core/constants/payment_modes.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/logging/app_logger.dart';
@@ -20,8 +21,8 @@ import '../../domain/entities/report_entities.dart';
 import '../../domain/repositories/reports_repository.dart';
 
 class ReportsRepositoryImpl implements ReportsRepository {
-  final AppDatabase _db;
   const ReportsRepositoryImpl(this._db);
+  final AppDatabase _db;
 
   @override
   Future<Result<ReportData>> buildReport(ReportFilter filter) async {
@@ -78,9 +79,9 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final students = await _db.select(_db.studentsTable).get();
     final batches = await _db.select(_db.batchesTable).get();
 
-    final voucherMap = {for (var v in vouchers) v.id: v};
-    final studentMap = {for (var s in students) s.id: s};
-    final batchMap = {for (var b in batches) b.id: b.name};
+    final voucherMap = {for (final v in vouchers) v.id: v};
+    final studentMap = {for (final s in students) s.id: s};
+    final batchMap = {for (final b in batches) b.id: b.name};
 
     int totalAmountPaisa = 0;
     final rows = <List<String>>[];
@@ -126,8 +127,8 @@ class ReportsRepositoryImpl implements ReportsRepository {
 
     final students = await _db.select(_db.studentsTable).get();
     final batches = await _db.select(_db.batchesTable).get();
-    final studentMap = {for (var s in students) s.id: s};
-    final batchMap = {for (var b in batches) b.id: b.name};
+    final studentMap = {for (final s in students) s.id: s};
+    final batchMap = {for (final b in batches) b.id: b.name};
 
     int totalOutstandingPaisa = 0;
     int count30 = 0;
@@ -228,7 +229,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
         e.entryType.toUpperCase(),
         e.category.toUpperCase(),
         e.description,
-        e.paymentMode.toUpperCase(),
+        PaymentModes.getPdfDisplayName(e.paymentMode),
         isInflow ? Money.fromPaisa(e.amountPaisa).format() : '-',
         !isInflow ? Money.fromPaisa(e.amountPaisa).format() : '-',
       ]);
@@ -273,7 +274,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
         .get();
 
     int totalIncomePaisa = 0;
-    for (var r in receipts) {
+    for (final r in receipts) {
       totalIncomePaisa += r.amountPaisa;
     }
 
@@ -281,7 +282,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final expenseCatTotals = <String, int>{};
     int totalExpensePaisa = 0;
 
-    for (var o in outflows) {
+    for (final o in outflows) {
       totalExpensePaisa += o.amountPaisa;
       expenseCatTotals[o.category] = (expenseCatTotals[o.category] ?? 0) + o.amountPaisa;
     }
@@ -324,7 +325,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final runs = await query.get();
 
     final staff = await _db.select(_db.staffMembersTable).get();
-    final staffMap = {for (var s in staff) s.id: s};
+    final staffMap = {for (final s in staff) s.id: s};
 
     int totalNetSalaryPaisa = 0;
     final rows = <List<String>>[];
@@ -378,7 +379,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
   Future<ReportData> _buildInventoryValuation(ReportFilter filter, DateTime now) async {
     final items = await (_db.select(_db.inventoryItemsTable)..orderBy([(t) => OrderingTerm.asc(t.name)])).get();
     final categories = await _db.select(_db.inventoryCategoriesTable).get();
-    final catMap = {for (var c in categories) c.id: c.name};
+    final catMap = {for (final c in categories) c.id: c.name};
 
     int totalValuationPaisa = 0;
     int lowStockCount = 0;
@@ -441,7 +442,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
         .get();
 
     final items = await _db.select(_db.inventoryItemsTable).get();
-    final itemMap = {for (var i in items) i.id: i.name};
+    final itemMap = {for (final i in items) i.id: i.name};
 
     int totalIn = 0;
     int totalOut = 0;
@@ -503,7 +504,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
         .get();
 
     final suppliers = await _db.select(_db.suppliersTable).get();
-    final supMap = {for (var s in suppliers) s.id: s.name};
+    final supMap = {for (final s in suppliers) s.id: s.name};
 
     int totalPurchasesPaisa = 0;
     int totalPaymentsPaisa = 0;
@@ -561,8 +562,8 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final batches = await _db.select(_db.batchesTable).get();
     final courses = await _db.select(_db.coursesTable).get();
 
-    final batchMap = {for (var b in batches) b.id: b};
-    final courseMap = {for (var c in courses) c.id: c.name};
+    final batchMap = {for (final b in batches) b.id: b};
+    final courseMap = {for (final c in courses) c.id: c.name};
 
     int activeCount = 0;
     final rows = <List<String>>[];
@@ -848,7 +849,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
               return pw.Container(
                 margin: const pw.EdgeInsets.only(bottom: 16),
                 decoration: const pw.BoxDecoration(
-                  border: pw.Border(bottom: pw.BorderSide(color: PdfColors.teal, width: 1.5)),
+                  border: pw.Border(bottom: pw.BorderSide(color: PdfColors.blue800, width: 1.5)),
                 ),
                 padding: const pw.EdgeInsets.only(bottom: 8),
                 child: pw.Row(
@@ -857,7 +858,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text(academyName, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
+                        pw.Text(academyName, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
                         pw.SizedBox(height: 2),
                         pw.Text(data.title, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey800)),
                         pw.Text(data.subtitle, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
@@ -866,7 +867,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
-                        pw.Text('OFFICIAL REPORT', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
+                        pw.Text('OFFICIAL REPORT', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800)),
                         pw.Text('Date: ${data.generatedAt.day}/${data.generatedAt.month}/${data.generatedAt.year}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
                       ],
                     ),
@@ -902,7 +903,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
                     headers: data.headers,
                     data: data.rows,
                     headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-                    headerDecoration: const pw.BoxDecoration(color: PdfColors.teal700),
+                    headerDecoration: const pw.BoxDecoration(color: PdfColors.blue800),
                     cellStyle: const pw.TextStyle(fontSize: 8),
                     cellAlignment: pw.Alignment.centerLeft,
                     cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -924,7 +925,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
                           children: [
                             pw.Text(e.key, style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700, fontWeight: pw.FontWeight.bold)),
                             pw.SizedBox(height: 3),
-                            pw.Text(e.value, style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.teal900)),
+                            pw.Text(e.value, style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
                           ],
                         );
                       }).toList(),

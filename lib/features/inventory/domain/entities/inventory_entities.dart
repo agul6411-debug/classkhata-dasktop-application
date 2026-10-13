@@ -5,30 +5,21 @@ import 'package:equatable/equatable.dart';
 import '../../../../core/money/money.dart';
 
 class InventoryCategory extends Equatable {
-  final int id;
-  final String name;
-  final String? description;
 
   const InventoryCategory({
     required this.id,
     required this.name,
     this.description,
   });
+  final int id;
+  final String name;
+  final String? description;
 
   @override
   List<Object?> get props => [id, name, description];
 }
 
 class InventoryItem extends Equatable {
-  final int id;
-  final int categoryId;
-  final String categoryName;
-  final String name;
-  final String unit; // 'pcs', 'box', 'pack'
-  final int quantityOnHand;
-  final Money unitCost;
-  final Money sellingPrice;
-  final int reorderLevel;
 
   const InventoryItem({
     required this.id,
@@ -41,6 +32,15 @@ class InventoryItem extends Equatable {
     this.sellingPrice = const Money(0),
     required this.reorderLevel,
   });
+  final int id;
+  final int categoryId;
+  final String categoryName;
+  final String name;
+  final String unit; // 'pcs', 'box', 'pack'
+  final int quantityOnHand;
+  final Money unitCost;
+  final Money sellingPrice;
+  final int reorderLevel;
 
   bool get isLowStock => quantityOnHand <= reorderLevel;
   Money get totalValue => unitCost * quantityOnHand;
@@ -60,15 +60,6 @@ class InventoryItem extends Equatable {
 }
 
 class InventoryMovement extends Equatable {
-  final int id;
-  final int itemId;
-  final String itemName;
-  final String movementType; // 'in', 'out', 'adjustment'
-  final int quantity;
-  final Money unitCost;
-  final String reason;
-  final String? referenceNumber;
-  final DateTime movementDate;
 
   const InventoryMovement({
     required this.id,
@@ -81,6 +72,15 @@ class InventoryMovement extends Equatable {
     this.referenceNumber,
     required this.movementDate,
   });
+  final int id;
+  final int itemId;
+  final String itemName;
+  final String movementType; // 'in', 'out', 'adjustment'
+  final int quantity;
+  final Money unitCost;
+  final String reason;
+  final String? referenceNumber;
+  final DateTime movementDate;
 
   bool get isIn => movementType.toLowerCase() == 'in';
   bool get isOut => movementType.toLowerCase() == 'out';
@@ -100,14 +100,6 @@ class InventoryMovement extends Equatable {
 }
 
 class StockTakeRecord extends Equatable {
-  final int id;
-  final int itemId;
-  final String itemName;
-  final int recordedQuantity;
-  final int actualQuantity;
-  final int discrepancy;
-  final String? reason;
-  final DateTime reconciledAt;
 
   const StockTakeRecord({
     required this.id,
@@ -119,6 +111,14 @@ class StockTakeRecord extends Equatable {
     this.reason,
     required this.reconciledAt,
   });
+  final int id;
+  final int itemId;
+  final String itemName;
+  final int recordedQuantity;
+  final int actualQuantity;
+  final int discrepancy;
+  final String? reason;
+  final DateTime reconciledAt;
 
   bool get hasDiscrepancy => discrepancy != 0;
 
@@ -140,14 +140,6 @@ class StockTakeRecord extends Equatable {
 // ---------------------------------------------------------------------------
 
 class Supplier extends Equatable {
-  final int id;
-  final String name;
-  final String? contactPerson;
-  final String? phone;
-  final String? email;
-  final String? address;
-  final Money openingBalance;
-  final Money currentBalance;
 
   const Supplier({
     required this.id,
@@ -159,6 +151,14 @@ class Supplier extends Equatable {
     required this.openingBalance,
     required this.currentBalance,
   });
+  final int id;
+  final String name;
+  final String? contactPerson;
+  final String? phone;
+  final String? email;
+  final String? address;
+  final Money openingBalance;
+  final Money currentBalance;
 
   @override
   List<Object?> get props => [
@@ -174,13 +174,6 @@ class Supplier extends Equatable {
 }
 
 class SupplierLedgerEntry extends Equatable {
-  final int id;
-  final int supplierId;
-  final String transactionType; // 'purchase', 'payment', 'return', 'opening_balance'
-  final Money amount;
-  final String? referenceNumber;
-  final String? notes;
-  final DateTime transactionDate;
 
   const SupplierLedgerEntry({
     required this.id,
@@ -191,6 +184,13 @@ class SupplierLedgerEntry extends Equatable {
     this.notes,
     required this.transactionDate,
   });
+  final int id;
+  final int supplierId;
+  final String transactionType; // 'purchase', 'payment', 'return', 'opening_balance'
+  final Money amount;
+  final String? referenceNumber;
+  final String? notes;
+  final DateTime transactionDate;
 
   bool get isPurchase => transactionType == 'purchase';
   bool get isPayment => transactionType == 'payment';
@@ -212,13 +212,6 @@ class SupplierLedgerEntry extends Equatable {
 // ---------------------------------------------------------------------------
 
 class PurchaseLineItem extends Equatable {
-  final int id;
-  final int purchaseId;
-  final int itemId;
-  final String itemName;
-  final int quantity;
-  final Money unitCost;
-  final Money totalCost;
 
   const PurchaseLineItem({
     required this.id,
@@ -229,6 +222,13 @@ class PurchaseLineItem extends Equatable {
     required this.unitCost,
     required this.totalCost,
   });
+  final int id;
+  final int purchaseId;
+  final int itemId;
+  final String itemName;
+  final int quantity;
+  final Money unitCost;
+  final Money totalCost;
 
   @override
   List<Object?> get props => [
@@ -243,17 +243,6 @@ class PurchaseLineItem extends Equatable {
 }
 
 class PurchaseRecord extends Equatable {
-  final int id;
-  final String purchaseNumber;
-  final int supplierId;
-  final String supplierName;
-  final Money totalAmount;
-  final Money paidAmount;
-  final String paymentMode;
-  final String? invoiceNumber;
-  final String? notes;
-  final DateTime purchaseDate;
-  final List<PurchaseLineItem> items;
 
   const PurchaseRecord({
     required this.id,
@@ -268,6 +257,17 @@ class PurchaseRecord extends Equatable {
     required this.purchaseDate,
     this.items = const [],
   });
+  final int id;
+  final String purchaseNumber;
+  final int supplierId;
+  final String supplierName;
+  final Money totalAmount;
+  final Money paidAmount;
+  final String paymentMode;
+  final String? invoiceNumber;
+  final String? notes;
+  final DateTime purchaseDate;
+  final List<PurchaseLineItem> items;
 
   Money get balanceDue => totalAmount - paidAmount;
 
@@ -292,19 +292,6 @@ class PurchaseRecord extends Equatable {
 // ---------------------------------------------------------------------------
 
 class ItemIssuance extends Equatable {
-  final int id;
-  final int itemId;
-  final String itemName;
-  final int quantity;
-  final Money unitPrice;
-  final String recipientType; // 'student' or 'staff'
-  final int? studentId;
-  final String? studentName;
-  final int? staffId;
-  final String? staffName;
-  final int? feeVoucherId;
-  final String reason;
-  final DateTime issuedDate;
 
   const ItemIssuance({
     required this.id,
@@ -321,6 +308,19 @@ class ItemIssuance extends Equatable {
     required this.reason,
     required this.issuedDate,
   });
+  final int id;
+  final int itemId;
+  final String itemName;
+  final int quantity;
+  final Money unitPrice;
+  final String recipientType; // 'student' or 'staff'
+  final int? studentId;
+  final String? studentName;
+  final int? staffId;
+  final String? staffName;
+  final int? feeVoucherId;
+  final String reason;
+  final DateTime issuedDate;
 
   Money get totalCharge => unitPrice * quantity;
 
@@ -347,15 +347,6 @@ class ItemIssuance extends Equatable {
 // ---------------------------------------------------------------------------
 
 class StockValuationItem extends Equatable {
-  final int itemId;
-  final String itemName;
-  final String categoryName;
-  final String unit;
-  final int quantityOnHand;
-  final Money unitCost;
-  final Money totalValuation;
-  final int reorderLevel;
-  final bool isLowStock;
 
   const StockValuationItem({
     required this.itemId,
@@ -368,6 +359,15 @@ class StockValuationItem extends Equatable {
     required this.reorderLevel,
     required this.isLowStock,
   });
+  final int itemId;
+  final String itemName;
+  final String categoryName;
+  final String unit;
+  final int quantityOnHand;
+  final Money unitCost;
+  final Money totalValuation;
+  final int reorderLevel;
+  final bool isLowStock;
 
   @override
   List<Object?> get props => [
@@ -384,10 +384,6 @@ class StockValuationItem extends Equatable {
 }
 
 class StockValuationReport extends Equatable {
-  final List<StockValuationItem> items;
-  final Money totalInventoryValue;
-  final int totalItemsCount;
-  final int lowStockCount;
 
   const StockValuationReport({
     required this.items,
@@ -395,6 +391,10 @@ class StockValuationReport extends Equatable {
     required this.totalItemsCount,
     required this.lowStockCount,
   });
+  final List<StockValuationItem> items;
+  final Money totalInventoryValue;
+  final int totalItemsCount;
+  final int lowStockCount;
 
   @override
   List<Object?> get props => [

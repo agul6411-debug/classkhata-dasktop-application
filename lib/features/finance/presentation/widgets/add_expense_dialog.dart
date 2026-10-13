@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../../../core/constants/payment_modes.dart';
 import '../../../../core/money/money.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
@@ -23,7 +24,7 @@ class _AddExpenseDialogState extends ConsumerState<AddExpenseDialog> {
   final _descCtrl = TextEditingController();
   final _refCtrl = TextEditingController();
   int? _selectedCategoryId;
-  String _paymentMode = 'cash';
+  String _paymentMode = PaymentModes.handCash;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -82,7 +83,6 @@ class _AddExpenseDialogState extends ConsumerState<AddExpenseDialog> {
     final categoriesAsync = ref.watch(expenseCategoriesProvider);
 
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
@@ -92,9 +92,9 @@ class _AddExpenseDialogState extends ConsumerState<AddExpenseDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'Record Expense',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.headingCol(context)),
               ),
               const Divider(),
               const SizedBox(height: 8),
@@ -105,7 +105,7 @@ class _AddExpenseDialogState extends ConsumerState<AddExpenseDialog> {
               categoriesAsync.when(
                 data: (cats) {
                   return DropdownButtonFormField<int>(
-                    value: _selectedCategoryId ?? (cats.isNotEmpty ? cats.first.id : null),
+                    initialValue: _selectedCategoryId ?? (cats.isNotEmpty ? cats.first.id : null),
                     decoration: const InputDecoration(labelText: 'Expense Category'),
                     items: cats.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
                     onChanged: (val) => setState(() => _selectedCategoryId = val),
@@ -131,13 +131,10 @@ class _AddExpenseDialogState extends ConsumerState<AddExpenseDialog> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _paymentMode,
+                      initialValue: _paymentMode,
                       decoration: const InputDecoration(labelText: 'Payment Mode'),
-                      items: const [
-                        DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                        DropdownMenuItem(value: 'bank', child: Text('Bank Transfer')),
-                      ],
-                      onChanged: (val) => setState(() => _paymentMode = val ?? 'cash'),
+                      items: PaymentModes.dropdownItems,
+                      onChanged: (val) => setState(() => _paymentMode = val ?? PaymentModes.handCash),
                     ),
                   ),
                   const SizedBox(width: 12),

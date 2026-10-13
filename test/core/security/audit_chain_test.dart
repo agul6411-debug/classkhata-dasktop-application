@@ -1,11 +1,11 @@
-import 'package:classkhata/core/security/audit_chain.dart';
 import 'package:classkhata/core/constants/app_constants.dart';
 import 'package:classkhata/core/errors/failures.dart';
+import 'package:classkhata/core/security/audit_chain.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Audit Chain', () {
-    AuditEntry _makeEntry({
+    AuditEntry makeEntry({
       required int id,
       required String previousHash,
       String action = 'test.action',
@@ -36,22 +36,22 @@ void main() {
     });
 
     test('single genesis entry is valid', () {
-      final entry = _makeEntry(id: 1, previousHash: AppConstants.auditChainGenesisHash);
+      final entry = makeEntry(id: 1, previousHash: AppConstants.auditChainGenesisHash);
       final result = verifyAuditChain([entry]);
       expect(result.isSuccess, true);
     });
 
     test('chain of three entries is valid', () {
-      final e1 = _makeEntry(id: 1, previousHash: AppConstants.auditChainGenesisHash);
-      final e2 = _makeEntry(id: 2, previousHash: e1.entryHash);
-      final e3 = _makeEntry(id: 3, previousHash: e2.entryHash);
+      final e1 = makeEntry(id: 1, previousHash: AppConstants.auditChainGenesisHash);
+      final e2 = makeEntry(id: 2, previousHash: e1.entryHash);
+      final e3 = makeEntry(id: 3, previousHash: e2.entryHash);
       final result = verifyAuditChain([e1, e2, e3]);
       expect(result.isSuccess, true);
     });
 
     test('tampered entry hash is detected', () {
-      final e1 = _makeEntry(id: 1, previousHash: AppConstants.auditChainGenesisHash);
-      final e2 = _makeEntry(id: 2, previousHash: e1.entryHash);
+      final e1 = makeEntry(id: 1, previousHash: AppConstants.auditChainGenesisHash);
+      final e2 = makeEntry(id: 2, previousHash: e1.entryHash);
       // Tamper: replace e2's hash with a fake one
       final tampered = AuditEntry(
         id: e2.id,
@@ -71,17 +71,17 @@ void main() {
     });
 
     test('broken previousHash link is detected', () {
-      final e1 = _makeEntry(id: 1, previousHash: AppConstants.auditChainGenesisHash);
+      final e1 = makeEntry(id: 1, previousHash: AppConstants.auditChainGenesisHash);
       // e2 references a wrong previous hash
-      final e2 = _makeEntry(id: 2, previousHash: 'WRONG_PREVIOUS_HASH');
+      final e2 = makeEntry(id: 2, previousHash: 'WRONG_PREVIOUS_HASH');
       final result = verifyAuditChain([e1, e2]);
       expect(result.isFailure, true);
     });
 
     test('deleted middle entry is detected', () {
-      final e1 = _makeEntry(id: 1, previousHash: AppConstants.auditChainGenesisHash);
-      final e2 = _makeEntry(id: 2, previousHash: e1.entryHash);
-      final e3 = _makeEntry(id: 3, previousHash: e2.entryHash);
+      final e1 = makeEntry(id: 1, previousHash: AppConstants.auditChainGenesisHash);
+      final e2 = makeEntry(id: 2, previousHash: e1.entryHash);
+      final e3 = makeEntry(id: 3, previousHash: e2.entryHash);
       // Skip e2 (simulate deletion)
       final result = verifyAuditChain([e1, e3]);
       expect(result.isFailure, true);

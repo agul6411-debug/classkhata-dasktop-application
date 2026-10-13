@@ -14,9 +14,9 @@ import '../../domain/repositories/setup_repository.dart';
 import '../datasources/setup_dao.dart';
 
 class SetupRepositoryImpl implements SetupRepository {
-  final SetupDao _dao;
 
   const SetupRepositoryImpl(this._dao);
+  final SetupDao _dao;
 
   @override
   Future<Result<bool>> isSetupComplete() async {

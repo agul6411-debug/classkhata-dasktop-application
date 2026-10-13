@@ -19,16 +19,6 @@ enum StudentStatus {
 }
 
 class Student extends Equatable {
-  final int id;
-  final String rollNumber;
-  final int? familyId;
-  final int batchId;
-  final String name;
-  final String? phone;
-  final String guardianPhone;
-  final String? email;
-  final DateTime joiningDate;
-  final StudentStatus status;
 
   const Student({
     required this.id,
@@ -42,6 +32,16 @@ class Student extends Equatable {
     required this.joiningDate,
     required this.status,
   });
+  final int id;
+  final String rollNumber;
+  final int? familyId;
+  final int batchId;
+  final String name;
+  final String? phone;
+  final String guardianPhone;
+  final String? email;
+  final DateTime joiningDate;
+  final StudentStatus status;
 
   @override
   List<Object?> get props => [
@@ -59,11 +59,6 @@ class Student extends Equatable {
 }
 
 class Family extends Equatable {
-  final int id;
-  final String familyCode;
-  final String guardianName;
-  final String guardianPhone;
-  final String? address;
 
   const Family({
     required this.id,
@@ -72,17 +67,17 @@ class Family extends Equatable {
     required this.guardianPhone,
     this.address,
   });
+  final int id;
+  final String familyCode;
+  final String guardianName;
+  final String guardianPhone;
+  final String? address;
 
   @override
   List<Object?> get props => [id, familyCode, guardianName, guardianPhone, address];
 }
 
 class StudentImportRow extends Equatable {
-  final String name;
-  final String guardianPhone;
-  final String? phone;
-  final String? email;
-  final String? rollNumber;
 
   const StudentImportRow({
     required this.name,
@@ -91,6 +86,11 @@ class StudentImportRow extends Equatable {
     this.email,
     this.rollNumber,
   });
+  final String name;
+  final String guardianPhone;
+  final String? phone;
+  final String? email;
+  final String? rollNumber;
 
   @override
   List<Object?> get props => [name, guardianPhone, phone, email, rollNumber];

@@ -12,9 +12,9 @@ import '../repositories/auth_repository.dart';
 ///
 /// Enforces lockout and surfaces plain-language errors.
 class LoginUseCase {
-  final AuthRepository _repository;
 
   const LoginUseCase(this._repository);
+  final AuthRepository _repository;
 
   Future<Result<AuthUser>> call({
     required String email,
@@ -30,10 +30,12 @@ class LoginUseCase {
 
     // Check lockout status first
     final lockoutResult = await _repository.getLockoutStatus(email.trim());
-    if (lockoutResult.isFailure) return Failure(lockoutResult.fold(
+    if (lockoutResult.isFailure) {
+      return Failure(lockoutResult.fold(
       onSuccess: (_) => const UnexpectedFailure(''),
       onFailure: (f) => f,
     ));
+    }
 
     final lockout = lockoutResult.valueOrThrow;
     if (lockout.isLocked) {

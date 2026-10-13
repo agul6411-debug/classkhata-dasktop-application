@@ -8,8 +8,8 @@ import '../../../../core/database/app_database.dart';
 import '../../domain/entities/student_entities.dart';
 
 class StudentDao {
-  final AppDatabase _db;
   const StudentDao(this._db);
+  final AppDatabase _db;
 
   AppDatabase get db => _db;
 

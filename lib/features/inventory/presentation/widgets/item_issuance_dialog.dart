@@ -125,7 +125,6 @@ class _ItemIssuanceDialogState extends ConsumerState<ItemIssuanceDialog> {
     final vouchersAsync = ref.watch(vouchersListProvider);
 
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
@@ -139,9 +138,9 @@ class _ItemIssuanceDialogState extends ConsumerState<ItemIssuanceDialog> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Issue Inventory Item',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.heading),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.headingCol(context)),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close, size: 20),

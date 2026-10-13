@@ -12,14 +12,6 @@ enum LicenseStatus {
 }
 
 class LicenseInfo extends Equatable {
-  final LicenseStatus status;
-  final String machineId;
-  final DateTime trialStartedAt;
-  final int daysRemaining;
-  final String? academyName;
-  final String? licenseKey;
-  final DateTime? activatedAt;
-  final String? alertMessage;
 
   const LicenseInfo({
     required this.status,
@@ -31,6 +23,14 @@ class LicenseInfo extends Equatable {
     this.activatedAt,
     this.alertMessage,
   });
+  final LicenseStatus status;
+  final String machineId;
+  final DateTime trialStartedAt;
+  final int daysRemaining;
+  final String? academyName;
+  final String? licenseKey;
+  final DateTime? activatedAt;
+  final String? alertMessage;
 
   /// When in read-only mode, data is viewable and exportable, but
   /// new financial entries (payments, expenses, salary payouts, purchases) are forbidden.

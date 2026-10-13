@@ -7,8 +7,8 @@ import '../entities/student_entities.dart';
 import '../repositories/student_repository.dart';
 
 class RegisterStudentUseCase {
-  final StudentRepository _repository;
   const RegisterStudentUseCase(this._repository);
+  final StudentRepository _repository;
 
   Future<Result<Student>> call({
     required String name,

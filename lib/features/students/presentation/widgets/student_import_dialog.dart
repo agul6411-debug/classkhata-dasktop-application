@@ -116,7 +116,6 @@ class _StudentImportDialogState extends ConsumerState<StudentImportDialog> {
     final academicDataAsync = ref.watch(academicDataProvider);
 
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 600),
@@ -129,12 +128,12 @@ class _StudentImportDialogState extends ConsumerState<StudentImportDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Bulk Student Import',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.heading,
+                      color: AppColors.headingCol(context),
                     ),
                   ),
                   IconButton(
@@ -169,7 +168,7 @@ class _StudentImportDialogState extends ConsumerState<StudentImportDialog> {
                 ],
                 academicDataAsync.when(
                   data: (data) => DropdownButtonFormField<int>(
-                    value: _selectedBatchId,
+                    initialValue: _selectedBatchId,
                     decoration: const InputDecoration(labelText: 'Target Class & Section *'),
                     items: data.batches.map((b) {
                       final course = data.courses.where((c) => c.id == b.courseId).firstOrNull;

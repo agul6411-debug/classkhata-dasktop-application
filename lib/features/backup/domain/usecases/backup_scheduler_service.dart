@@ -13,11 +13,6 @@ import '../entities/backup_meta.dart';
 import '../repositories/backup_repository.dart';
 
 class TestRestoreResult {
-  final bool isSuccessful;
-  final String checksum;
-  final int backupSize;
-  final int recordsCount;
-  final String? errorMessage;
 
   const TestRestoreResult({
     required this.isSuccessful,
@@ -26,18 +21,23 @@ class TestRestoreResult {
     required this.recordsCount,
     this.errorMessage,
   });
+  final bool isSuccessful;
+  final String checksum;
+  final int backupSize;
+  final int recordsCount;
+  final String? errorMessage;
 }
 
 class BackupSchedulerService {
-  final AppDatabase _db;
-  final BackupRepository _backupRepo;
-  final Directory? _overrideTempDir;
 
   BackupSchedulerService(
     this._db,
     this._backupRepo, {
     Directory? overrideTempDir,
   }) : _overrideTempDir = overrideTempDir;
+  final AppDatabase _db;
+  final BackupRepository _backupRepo;
+  final Directory? _overrideTempDir;
 
   /// Runs daily automatic backup if enabled and due (> 24 hours since last backup),
   /// and automatically prunes backups older than the retention threshold N.

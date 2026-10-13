@@ -9,8 +9,8 @@ import '../../../../core/security/audit_chain.dart';
 import '../../domain/entities/fee_entities.dart';
 
 class FeeDao {
-  final AppDatabase _db;
   const FeeDao(this._db);
+  final AppDatabase _db;
 
   AppDatabase get db => _db;
 

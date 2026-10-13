@@ -99,7 +99,6 @@ class _SetupWizardPageState extends ConsumerState<SetupWizardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
@@ -275,38 +274,38 @@ class _SetupWizardPageState extends ConsumerState<SetupWizardPage> {
       children: [
         const Icon(Icons.key_outlined, size: 40, color: AppColors.accent),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Save Your Recovery Key',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: AppColors.heading,
+            color: AppColors.headingCol(context),
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'This key is shown only once. If you forget your password, '
           'this key is the only way to recover access. Store it safely.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+          style: TextStyle(color: AppColors.textMutedCol(context), fontSize: 13),
         ),
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
-            color: AppColors.inputFill,
-            border: Border.all(color: AppColors.border),
+            color: AppColors.subCardBg(context),
+            border: Border.all(color: AppColors.borderCol(context)),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
             _recoveryKey ?? '',
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
               letterSpacing: 4,
-              color: AppColors.heading,
+              color: AppColors.headingCol(context),
               fontFamily: 'monospace',
             ),
           ),
@@ -347,14 +346,14 @@ class _SetupWizardPageState extends ConsumerState<SetupWizardPage> {
         const SizedBox(height: 4),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w700,
-            color: AppColors.heading,
+            color: AppColors.headingCol(context),
           ),
         ),
         const SizedBox(height: 4),
-        Text(subtitle, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+        Text(subtitle, style: TextStyle(color: AppColors.textMutedCol(context), fontSize: 13)),
       ],
     );
   }

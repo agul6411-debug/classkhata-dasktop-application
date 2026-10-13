@@ -13,15 +13,15 @@ import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../domain/entities/inventory_entities.dart';
 import '../providers/inventory_providers.dart';
 
-class StockMovementDialog extends ConsumerStatefulWidget {
-  final InventoryItem? preselectedItem;
-  final String initialMovementType; // 'in' or 'out'
+class StockMovementDialog extends ConsumerStatefulWidget { // 'in' or 'out'
 
   const StockMovementDialog({
     super.key,
     this.preselectedItem,
     this.initialMovementType = 'in',
   });
+  final InventoryItem? preselectedItem;
+  final String initialMovementType;
 
   @override
   ConsumerState<StockMovementDialog> createState() => _StockMovementDialogState();
@@ -119,7 +119,6 @@ class _StockMovementDialogState extends ConsumerState<StockMovementDialog> {
     final itemsAsync = ref.watch(inventoryItemsProvider);
 
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
@@ -134,7 +133,7 @@ class _StockMovementDialogState extends ConsumerState<StockMovementDialog> {
                 children: [
                   Text(
                     _movementType == 'in' ? 'Record Stock In' : 'Record Stock Out',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.heading),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.headingCol(context)),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, size: 20),

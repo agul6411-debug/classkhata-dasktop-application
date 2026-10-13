@@ -11,8 +11,8 @@ import '../../domain/repositories/payroll_repository.dart';
 import '../datasources/payroll_dao.dart';
 
 class PayrollRepositoryImpl implements PayrollRepository {
-  final PayrollDao _dao;
   const PayrollRepositoryImpl(this._dao);
+  final PayrollDao _dao;
 
   @override
   Future<Result<List<StaffMember>>> getStaffMembers({StaffStatus? status}) async {
@@ -124,7 +124,7 @@ class PayrollRepositoryImpl implements PayrollRepository {
     try {
       final rows = await _dao.getPayrollRuns(monthYear: monthYear);
       final staffList = await _dao.getStaffMembers();
-      final staffMap = {for (var s in staffList) s.id: s};
+      final staffMap = {for (final s in staffList) s.id: s};
 
       final list = rows.map((r) {
         final staff = staffMap[r.staffId];

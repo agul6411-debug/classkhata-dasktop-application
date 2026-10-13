@@ -77,7 +77,6 @@ class _CreateSessionDialogState extends ConsumerState<CreateSessionDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 450),
@@ -87,9 +86,9 @@ class _CreateSessionDialogState extends ConsumerState<CreateSessionDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'New Academic Session',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.headingCol(context)),
               ),
               const Divider(),
               const SizedBox(height: 8),
@@ -139,7 +138,6 @@ class ManageSessionsDialog extends ConsumerWidget {
     final academicDataAsync = ref.watch(academicDataProvider);
 
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520, maxHeight: 600),
@@ -300,7 +298,6 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
@@ -310,7 +307,7 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Add School Class / Grade', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading)),
+              Text('Add School Class / Grade', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.headingCol(context))),
               const Divider(),
               const SizedBox(height: 8),
               if (_errorMessage != null) ...[
@@ -355,12 +352,12 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
 // ---------------------------------------------------------------------------
 
 class CreateBatchDialog extends ConsumerStatefulWidget {
-  final int? initialCourseId;
 
   const CreateBatchDialog({
     super.key,
     this.initialCourseId,
   });
+  final int? initialCourseId;
 
   @override
   ConsumerState<CreateBatchDialog> createState() => _CreateBatchDialogState();
@@ -454,7 +451,6 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
     final academicDataAsync = ref.watch(academicDataProvider);
 
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
@@ -464,7 +460,7 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Add Class Section', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading)),
+              Text('Add Class Section', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.headingCol(context))),
               const Divider(),
               const SizedBox(height: 8),
               if (_errorMessage != null) ...[
@@ -482,7 +478,7 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<int>(
-                          value: _selectedSessionId,
+                          initialValue: _selectedSessionId,
                           decoration: const InputDecoration(labelText: 'Academic Session *'),
                           items: data.sessions.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
                           onChanged: (val) => setState(() => _selectedSessionId = val),
@@ -491,7 +487,7 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: DropdownButtonFormField<int>(
-                          value: _selectedCourseId,
+                          initialValue: _selectedCourseId,
                           decoration: const InputDecoration(labelText: 'School Class *'),
                           items: data.courses.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
                           onChanged: (val) => setState(() => _selectedCourseId = val),

@@ -1,11 +1,11 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:drift/native.dart';
-import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:classkhata/core/database/app_database.dart';
 import 'package:classkhata/core/money/money.dart';
 import 'package:classkhata/features/fees/data/datasources/fee_dao.dart';
 import 'package:classkhata/features/fees/data/repositories/fee_repository_impl.dart';
 import 'package:classkhata/features/fees/domain/entities/fee_entities.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late AppDatabase db;
@@ -21,7 +21,7 @@ void main() {
     await db.into(db.academicSessionsTable).insert(
           AcademicSessionsTableCompanion.insert(
             name: '2026-2027',
-            startDate: DateTime(2026, 1, 1),
+            startDate: DateTime(2026),
             endDate: DateTime(2026, 12, 31),
           ),
         );

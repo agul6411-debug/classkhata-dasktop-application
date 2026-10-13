@@ -9,10 +9,10 @@ import 'package:equatable/equatable.dart';
 
 /// Base class for all application failures.
 abstract class AppFailure extends Equatable {
-  final String message;
-  final String? technicalDetail;
 
   const AppFailure(this.message, {this.technicalDetail});
+  final String message;
+  final String? technicalDetail;
 
   @override
   List<Object?> get props => [message, technicalDetail];
@@ -94,11 +94,11 @@ sealed class Result<T> {
 }
 
 final class Success<T> extends Result<T> {
-  final T value;
   const Success(this.value);
+  final T value;
 }
 
 final class Failure<T> extends Result<T> {
-  final AppFailure failure;
   const Failure(this.failure);
+  final AppFailure failure;
 }

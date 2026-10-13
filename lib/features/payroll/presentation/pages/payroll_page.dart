@@ -73,8 +73,12 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headingColor = isDark ? AppColors.darkTextPrimary : AppColors.heading;
+    final textMutedColor = isDark ? AppColors.darkTextSecondary : AppColors.textMuted;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.border;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -87,14 +91,14 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Payroll & Staff Management',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.heading),
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: headingColor),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Staff profiles, salary structures, advances, monthly payroll runs, and payslips.',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      style: TextStyle(color: textMutedColor, fontSize: 13),
                     ),
                   ],
                 ),
@@ -103,6 +107,10 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
                     OutlinedButton.icon(
                       icon: const Icon(Icons.money_off, size: 16),
                       label: const Text('Issue Advance'),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.accent),
+                        foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.accent,
+                      ),
                       onPressed: () => showDialog<bool>(
                         context: context,
                         builder: (_) => const AdvanceFormDialog(),
@@ -125,14 +133,14 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
 
             // Tab bar
             Container(
-              decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
+              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: borderColor))),
               child: TabBar(
                 controller: _tabController,
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
-                labelColor: AppColors.accent,
-                unselectedLabelColor: AppColors.textSecondary,
-                indicatorColor: AppColors.accent,
+                labelColor: isDark ? AppColors.accentLight : AppColors.accent,
+                unselectedLabelColor: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                indicatorColor: isDark ? AppColors.accentLight : AppColors.accent,
                 indicatorWeight: 3,
                 tabs: const [
                   Tab(text: 'Monthly Payroll Register'),
@@ -175,9 +183,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: AppColors.cardBg(context),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: AppColors.borderCol(context)),
               ),
               child: Row(
                 children: [
@@ -232,9 +240,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
 
               return Container(
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: AppColors.cardBg(context),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: AppColors.borderCol(context)),
                 ),
                 child: SingleChildScrollView(
                   child: DataTable(
@@ -321,9 +329,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
 
         return Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.cardBg(context),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: AppColors.borderCol(context)),
           ),
           child: SingleChildScrollView(
             child: DataTable(
@@ -389,9 +397,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
 
         return Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.cardBg(context),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: AppColors.borderCol(context)),
           ),
           child: SingleChildScrollView(
             child: DataTable(

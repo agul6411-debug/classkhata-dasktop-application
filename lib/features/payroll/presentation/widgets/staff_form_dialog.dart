@@ -120,7 +120,6 @@ class _StaffFormDialogState extends ConsumerState<StaffFormDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 540),
@@ -130,9 +129,9 @@ class _StaffFormDialogState extends ConsumerState<StaffFormDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'Add Staff Member',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.headingCol(context)),
               ),
               const SizedBox(height: 8),
               const Divider(),
@@ -187,7 +186,7 @@ class _StaffFormDialogState extends ConsumerState<StaffFormDialog> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _structureType,
+                      initialValue: _structureType,
                       decoration: const InputDecoration(labelText: 'Salary Basis'),
                       items: const [
                         DropdownMenuItem(value: 'fixed', child: Text('Fixed Monthly')),

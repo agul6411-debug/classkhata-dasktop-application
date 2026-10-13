@@ -11,10 +11,6 @@ import '../../app/theme/app_theme.dart';
 enum SearchResultType { student, staff, item, receipt }
 
 class SearchResultItem {
-  final String title;
-  final String subtitle;
-  final SearchResultType type;
-  final dynamic payload;
 
   const SearchResultItem({
     required this.title,
@@ -22,6 +18,10 @@ class SearchResultItem {
     required this.type,
     this.payload,
   });
+  final String title;
+  final String subtitle;
+  final SearchResultType type;
+  final dynamic payload;
 }
 
 class GlobalSearchDialog extends ConsumerStatefulWidget {

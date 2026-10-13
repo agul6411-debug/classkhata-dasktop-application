@@ -16,15 +16,6 @@ import '../logging/app_logger.dart';
 
 /// The data written to one audit log entry.
 class AuditEntry {
-  final int id;
-  final String action;
-  final String entityType;
-  final String? entityId;
-  final int userId;
-  final DateTime createdAt;
-  final String? details;
-  final String previousHash;
-  final String entryHash;
 
   const AuditEntry({
     required this.id,
@@ -37,6 +28,15 @@ class AuditEntry {
     required this.previousHash,
     required this.entryHash,
   });
+  final int id;
+  final String action;
+  final String entityType;
+  final String? entityId;
+  final int userId;
+  final DateTime createdAt;
+  final String? details;
+  final String previousHash;
+  final String entryHash;
 }
 
 /// Computes the hash for a new audit log entry.

@@ -52,8 +52,12 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headingColor = isDark ? AppColors.darkTextPrimary : AppColors.heading;
+    final textMutedColor = isDark ? AppColors.darkTextSecondary : AppColors.textMuted;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.border;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -66,18 +70,18 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Students & Academics',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.heading,
+                        color: headingColor,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Manage student registrations, classes, sections, and academic sessions.',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      style: TextStyle(color: textMutedColor, fontSize: 13),
                     ),
                   ],
                 ),
@@ -86,6 +90,10 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                     OutlinedButton.icon(
                       icon: const Icon(Icons.upload_file, size: 16),
                       label: const Text('Bulk Import'),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.accent),
+                        foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.accent,
+                      ),
                       onPressed: () => showDialog(
                         context: context,
                         builder: (_) => const StudentImportDialog(),
@@ -108,16 +116,16 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
 
             // Tab bar
             Container(
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: AppColors.border)),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: borderColor)),
               ),
               child: TabBar(
                 controller: _tabController,
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
-                labelColor: AppColors.accent,
-                unselectedLabelColor: AppColors.textSecondary,
-                indicatorColor: AppColors.accent,
+                labelColor: isDark ? AppColors.accentLight : AppColors.accent,
+                unselectedLabelColor: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                indicatorColor: isDark ? AppColors.accentLight : AppColors.accent,
                 indicatorWeight: 3,
                 tabs: const [
                   Tab(text: 'All Students'),
@@ -176,10 +184,10 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                 Expanded(
                   child: academicDataAsync.when(
                     data: (data) => DropdownButtonFormField<int?>(
-                      value: filterState.batchId,
+                      initialValue: filterState.batchId,
                       decoration: const InputDecoration(labelText: 'Filter by Section'),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('All Sections')),
+                        const DropdownMenuItem(child: Text('All Sections')),
                         ...data.batches.map((b) => DropdownMenuItem(
                               value: b.id,
                               child: Text(data.getFullSectionName(b.id)),
@@ -194,10 +202,10 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<StudentStatus?>(
-                    value: filterState.status,
+                    initialValue: filterState.status,
                     decoration: const InputDecoration(labelText: 'Status'),
                     items: const [
-                      DropdownMenuItem(value: null, child: Text('All Statuses')),
+                      DropdownMenuItem(child: Text('All Statuses')),
                       DropdownMenuItem(value: StudentStatus.active, child: Text('Active')),
                       DropdownMenuItem(value: StudentStatus.inactive, child: Text('Inactive')),
                       DropdownMenuItem(value: StudentStatus.left, child: Text('Left')),
@@ -224,7 +232,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
 
                 final acadData = academicDataAsync.asData?.value;
                 final batchesMap = acadData != null
-                    ? {for (var b in acadData.batches) b.id: b}
+                    ? {for (final b in acadData.batches) b.id: b}
                     : <int, Batch>{};
 
                 return SingleChildScrollView(
@@ -529,9 +537,9 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                                                 Container(
                                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                                   decoration: BoxDecoration(
-                                                    color: AppColors.surface,
+                                                    color: AppColors.subCardBg(context),
                                                     borderRadius: BorderRadius.circular(8),
-                                                    border: Border.all(color: AppColors.border),
+                                                    border: Border.all(color: AppColors.borderCol(context)),
                                                   ),
                                                   child: Text(
                                                     '$secCount sec',
@@ -740,7 +748,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            value: _promotionTargetBatchId,
+                            initialValue: _promotionTargetBatchId,
                             decoration: const InputDecoration(labelText: 'Target Next Class & Section *'),
                             items: data.batches
                                 .map((b) => DropdownMenuItem(value: b.id, child: Text(data.getFullSectionName(b.id))))
@@ -799,7 +807,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                               subtitle: Text('Current: $sectionName • Guardian: ${s.guardianPhone}'),
                               onChanged: (checked) {
                                 setState(() {
-                                  if (checked == true) {
+                                  if (checked ?? false) {
                                     _selectedStudentIds.add(s.id);
                                   } else {
                                     _selectedStudentIds.remove(s.id);

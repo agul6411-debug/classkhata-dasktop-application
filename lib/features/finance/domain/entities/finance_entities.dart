@@ -5,29 +5,21 @@ import 'package:equatable/equatable.dart';
 import '../../../../core/money/money.dart';
 
 class ExpenseCategory extends Equatable {
-  final int id;
-  final String name;
-  final String? description;
 
   const ExpenseCategory({
     required this.id,
     required this.name,
     this.description,
   });
+  final int id;
+  final String name;
+  final String? description;
 
   @override
   List<Object?> get props => [id, name, description];
 }
 
 class Expense extends Equatable {
-  final int id;
-  final int categoryId;
-  final String categoryName;
-  final Money amount;
-  final String description;
-  final String paymentMode;
-  final String? referenceNumber;
-  final DateTime expenseDate;
 
   const Expense({
     required this.id,
@@ -39,6 +31,14 @@ class Expense extends Equatable {
     this.referenceNumber,
     required this.expenseDate,
   });
+  final int id;
+  final int categoryId;
+  final String categoryName;
+  final Money amount;
+  final String description;
+  final String paymentMode;
+  final String? referenceNumber;
+  final DateTime expenseDate;
 
   @override
   List<Object?> get props => [
@@ -54,13 +54,6 @@ class Expense extends Equatable {
 }
 
 class CashBookEntry extends Equatable {
-  final int id;
-  final String entryType; // 'inflow' or 'outflow'
-  final String category;
-  final Money amount;
-  final String description;
-  final String paymentMode;
-  final DateTime entryDate;
 
   const CashBookEntry({
     required this.id,
@@ -71,6 +64,13 @@ class CashBookEntry extends Equatable {
     required this.paymentMode,
     required this.entryDate,
   });
+  final int id;
+  final String entryType; // 'inflow' or 'outflow'
+  final String category;
+  final Money amount;
+  final String description;
+  final String paymentMode;
+  final DateTime entryDate;
 
   bool get isInflow => entryType.toLowerCase() == 'inflow';
   bool get isOutflow => entryType.toLowerCase() == 'outflow';
@@ -80,17 +80,6 @@ class CashBookEntry extends Equatable {
 }
 
 class DayClosing extends Equatable {
-  final int id;
-  final DateTime closingDate;
-  final Money openingCash;
-  final Money totalReceipts;
-  final Money totalExpenses;
-  final Money expectedClosingCash;
-  final Money actualCash;
-  final Money discrepancy;
-  final String? discrepancyNote;
-  final int closedBy;
-  final DateTime closedAt;
 
   const DayClosing({
     required this.id,
@@ -105,6 +94,17 @@ class DayClosing extends Equatable {
     required this.closedBy,
     required this.closedAt,
   });
+  final int id;
+  final DateTime closingDate;
+  final Money openingCash;
+  final Money totalReceipts;
+  final Money totalExpenses;
+  final Money expectedClosingCash;
+  final Money actualCash;
+  final Money discrepancy;
+  final String? discrepancyNote;
+  final int closedBy;
+  final DateTime closedAt;
 
   bool get hasDiscrepancy => !discrepancy.isZero;
 
@@ -125,12 +125,6 @@ class DayClosing extends Equatable {
 }
 
 class ProfitAndLossSummary extends Equatable {
-  final String period; // e.g. "October 2026"
-  final Money totalIncome;
-  final Money feeIncome;
-  final Money totalExpenses;
-  final Money netProfit;
-  final double marginPercentage;
 
   const ProfitAndLossSummary({
     required this.period,
@@ -140,6 +134,12 @@ class ProfitAndLossSummary extends Equatable {
     required this.netProfit,
     required this.marginPercentage,
   });
+  final String period; // e.g. "October 2026"
+  final Money totalIncome;
+  final Money feeIncome;
+  final Money totalExpenses;
+  final Money netProfit;
+  final double marginPercentage;
 
   bool get isProfitable => netProfit.isPositive;
 

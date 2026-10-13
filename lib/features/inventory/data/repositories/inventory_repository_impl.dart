@@ -11,8 +11,8 @@ import '../../domain/repositories/inventory_repository.dart';
 import '../datasources/inventory_dao.dart';
 
 class InventoryRepositoryImpl implements InventoryRepository {
-  final InventoryDao _dao;
   const InventoryRepositoryImpl(this._dao);
+  final InventoryDao _dao;
 
   @override
   Future<Result<List<InventoryCategory>>> getCategories() async {
@@ -58,7 +58,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
     try {
       final rows = await _dao.getItems(categoryId: categoryId, lowStockOnly: lowStockOnly);
       final categories = await _dao.getCategories();
-      final catMap = {for (var c in categories) c.id: c.name};
+      final catMap = {for (final c in categories) c.id: c.name};
 
       final list = rows
           .map((r) => InventoryItem(
@@ -130,7 +130,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
     try {
       final rows = await _dao.getLowStockItems();
       final categories = await _dao.getCategories();
-      final catMap = {for (var c in categories) c.id: c.name};
+      final catMap = {for (final c in categories) c.id: c.name};
 
       final list = rows
           .map((r) => InventoryItem(
@@ -197,7 +197,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
     try {
       final rows = await _dao.getMovements(itemId: itemId);
       final items = await _dao.getItems();
-      final itemMap = {for (var i in items) i.id: i.name};
+      final itemMap = {for (final i in items) i.id: i.name};
 
       final list = rows
           .map((r) => InventoryMovement(
@@ -363,7 +363,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
       final supplier = await _dao.getSupplierById(supplierId);
       final purchaseLineRows = await _dao.getPurchaseItems(purchase.id);
       final itemCatalog = await _dao.getItems();
-      final itemMap = {for (var it in itemCatalog) it.id: it.name};
+      final itemMap = {for (final it in itemCatalog) it.id: it.name};
 
       final lines = purchaseLineRows
           .map((r) => PurchaseLineItem(
@@ -401,7 +401,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
     try {
       final rows = await _dao.getPurchases(supplierId: supplierId);
       final suppliers = await _dao.getSuppliers();
-      final supMap = {for (var s in suppliers) s.id: s.name};
+      final supMap = {for (final s in suppliers) s.id: s.name};
 
       final list = <PurchaseRecord>[];
       for (final r in rows) {
@@ -478,7 +478,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
     try {
       final rows = await _dao.getItemIssuances(itemId: itemId, studentId: studentId, staffId: staffId);
       final items = await _dao.getItems();
-      final itemMap = {for (var i in items) i.id: i.name};
+      final itemMap = {for (final i in items) i.id: i.name};
 
       final list = rows
           .map((r) => ItemIssuance(
@@ -549,7 +549,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
     try {
       final items = await _dao.getItems();
       final categories = await _dao.getCategories();
-      final catMap = {for (var c in categories) c.id: c.name};
+      final catMap = {for (final c in categories) c.id: c.name};
 
       int totalValuationPaisa = 0;
       int lowStockCount = 0;

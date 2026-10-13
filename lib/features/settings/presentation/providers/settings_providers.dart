@@ -14,13 +14,13 @@ final academyProfileProvider = FutureProvider<AcademyProfileTableData?>((ref) as
 final appSettingsMapProvider = FutureProvider<Map<String, String>>((ref) async {
   final db = ref.watch(appDatabaseProvider);
   final rows = await db.select(db.settingsTable).get();
-  return {for (var r in rows) r.key: r.value};
+  return {for (final r in rows) r.key: r.value};
 });
 
 /// Controller to update settings in the database.
 class SettingsController {
-  final AppDatabase _db;
   const SettingsController(this._db);
+  final AppDatabase _db;
 
   Future<void> updateSetting(String key, String value) async {
     await _db.into(_db.settingsTable).insertOnConflictUpdate(

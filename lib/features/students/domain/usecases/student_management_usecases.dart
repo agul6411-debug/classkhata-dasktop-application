@@ -6,8 +6,8 @@ import '../entities/student_entities.dart';
 import '../repositories/student_repository.dart';
 
 class SearchStudentsUseCase {
-  final StudentRepository _repository;
   const SearchStudentsUseCase(this._repository);
+  final StudentRepository _repository;
 
   Future<Result<List<Student>>> call({
     int? batchId,
@@ -23,8 +23,8 @@ class SearchStudentsUseCase {
 }
 
 class PromoteStudentsUseCase {
-  final StudentRepository _repository;
   const PromoteStudentsUseCase(this._repository);
+  final StudentRepository _repository;
 
   Future<Result<int>> call({
     required List<int> studentIds,

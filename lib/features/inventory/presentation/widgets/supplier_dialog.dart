@@ -84,7 +84,6 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500),
@@ -97,9 +96,9 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Add New Supplier',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.heading),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.headingCol(context)),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, size: 20),
@@ -194,9 +193,9 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
 }
 
 class SupplierPaymentDialog extends ConsumerStatefulWidget {
-  final int? preselectedSupplierId;
 
   const SupplierPaymentDialog({super.key, this.preselectedSupplierId});
+  final int? preselectedSupplierId;
 
   @override
   ConsumerState<SupplierPaymentDialog> createState() => _SupplierPaymentDialogState();
@@ -277,7 +276,6 @@ class _SupplierPaymentDialogState extends ConsumerState<SupplierPaymentDialog> {
     final suppliersAsync = ref.watch(suppliersProvider);
 
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500),
@@ -290,9 +288,9 @@ class _SupplierPaymentDialogState extends ConsumerState<SupplierPaymentDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Record Supplier Payment',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.heading),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.headingCol(context)),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, size: 20),

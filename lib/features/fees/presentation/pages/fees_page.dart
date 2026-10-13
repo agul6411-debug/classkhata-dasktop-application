@@ -2,8 +2,9 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf/pdf.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/printing/pdf_document_service.dart';
 import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
@@ -42,8 +43,12 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headingColor = isDark ? AppColors.darkTextPrimary : AppColors.heading;
+    final textMutedColor = isDark ? AppColors.darkTextSecondary : AppColors.textMuted;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.border;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -56,14 +61,14 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Fee Management',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.heading),
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: headingColor),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Vouchers, 3-step fee collection, receipts, and 30/60/90 days aging.',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      style: TextStyle(color: textMutedColor, fontSize: 13),
                     ),
                   ],
                 ),
@@ -72,6 +77,10 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
                     OutlinedButton.icon(
                       icon: const Icon(Icons.receipt, size: 16),
                       label: const Text('Generate Vouchers'),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.accent),
+                        foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.accent,
+                      ),
                       onPressed: () => showDialog(
                         context: context,
                         builder: (_) => const VoucherGenerateDialog(),
@@ -94,14 +103,14 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
 
             // Tab bar
             Container(
-              decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
+              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: borderColor))),
               child: TabBar(
                 controller: _tabController,
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
-                labelColor: AppColors.accent,
-                unselectedLabelColor: AppColors.textSecondary,
-                indicatorColor: AppColors.accent,
+                labelColor: isDark ? AppColors.accentLight : AppColors.accent,
+                unselectedLabelColor: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                indicatorColor: isDark ? AppColors.accentLight : AppColors.accent,
                 indicatorWeight: 3,
                 tabs: const [
                   Tab(text: 'Vouchers & Ledger'),
@@ -151,7 +160,6 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
     PdfPrintPreviewDialog.show(
       context,
       title: 'Fee Voucher Preview (${voucher.voucherNumber})',
-      initialFormat: PdfPageFormat.a4,
       pdfFileName: '${voucher.voucherNumber}.pdf',
       buildPdf: (format) => PdfDocumentService.generateFeeVoucherPdf(
         voucher: voucher,
@@ -164,6 +172,119 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
         format: format,
       ),
     );
+  }
+
+  Future<void> _shareVoucherWhatsApp(FeeVoucher voucher) async {
+    final academy = ref.read(academyProfileProvider).valueOrNull;
+    final academicData = ref.read(academicDataProvider).valueOrNull;
+    final batch = academicData?.batches.where((b) => b.id == voucher.batchId).firstOrNull;
+    final batchName = batch?.name ?? 'Class / Section';
+
+    final studentRepo = ref.read(studentRepositoryProvider);
+    final studentRes = await studentRepo.getStudentById(voucher.studentId);
+    final student = studentRes.fold(onSuccess: (s) => s, onFailure: (_) => null);
+
+    if (student == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Student details not found.')),
+      );
+      return;
+    }
+
+    final rawPhone = student.guardianPhone.replaceAll(RegExp(r'[^0-9]'), '');
+    final formattedPhone = rawPhone.startsWith('03')
+        ? '92${rawPhone.substring(1)}'
+        : rawPhone.startsWith('0')
+            ? '92${rawPhone.substring(1)}'
+            : rawPhone;
+
+    final academyName = academy?.name ?? 'ClassKhata School';
+    final remaining = voucher.balanceRemaining;
+    final isPaid = voucher.status == VoucherStatus.paid;
+    final isPartial = voucher.status == VoucherStatus.partial;
+    final dueDateStr =
+        '${voucher.dueDate.day.toString().padLeft(2, '0')}/${voucher.dueDate.month.toString().padLeft(2, '0')}/${voucher.dueDate.year}';
+
+    final title = isPaid
+        ? 'OFFICIAL FEE PAYMENT RECEIPT'
+        : isPartial
+            ? 'PARTIAL FEE PAYMENT RECEIPT'
+            : 'FEE CHALLAN & DUE NOTICE';
+
+    final statusStr = isPaid
+        ? 'PAID IN FULL ✅'
+        : isPartial
+            ? 'PARTIALLY PAID ⏳'
+            : 'PAYMENT DUE / PENDING ⚠️';
+
+    final buffer = StringBuffer();
+    buffer.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    buffer.writeln('🏫 *$academyName*');
+    buffer.writeln('📜 *$title*');
+    buffer.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    buffer.writeln('📋 *Voucher No :* ${voucher.voucherNumber}');
+    buffer.writeln('📅 *Fee Month  :* ${voucher.monthYear}');
+    buffer.writeln('⏰ *Due Date   :* $dueDateStr');
+    buffer.writeln('💳 *Status     :* $statusStr');
+    buffer.writeln();
+    buffer.writeln('👤 *STUDENT DETAILS*');
+    buffer.writeln('• *Student Name :* ${student.name}');
+    if (student.rollNumber.isNotEmpty) {
+      buffer.writeln('• *Roll Number  :* ${student.rollNumber}');
+    }
+    buffer.writeln('• *Class/Grade  :* $batchName');
+    buffer.writeln();
+    buffer.writeln('💰 *FEE CALCULATION BREAKDOWN*');
+    buffer.writeln('• Monthly Tuition  : ${voucher.baseAmount.format()}');
+    if (voucher.carryForward.paisa > 0) {
+      buffer.writeln('• Previous Arrears : ${voucher.carryForward.format()}');
+    }
+    if (voucher.lateFee.paisa > 0) {
+      buffer.writeln('• Late Surcharge   : ${voucher.lateFee.format()}');
+    }
+    if (voucher.discount.paisa > 0) {
+      buffer.writeln('• Concession/Disc. : -${voucher.discount.format()}');
+    }
+    buffer.writeln('──────────────────────────');
+    buffer.writeln('• *Total Bill Due   : ${voucher.totalDue.format()}*');
+    buffer.writeln('• *Total Paid So Far: ${voucher.amountPaid.format()}*');
+    buffer.writeln('• *Remaining Balance: ${remaining.format()}*');
+    buffer.writeln('──────────────────────────');
+    buffer.writeln('💳 *PAYMENT MODES ACCEPTED*');
+    buffer.writeln('• Hand Cash, JazzCash, EasyPaisa, Bank Transfer');
+    buffer.writeln();
+    final phone = academy?.phone;
+    if (phone != null && phone.isNotEmpty) {
+      buffer.writeln('📞 Contact: $phone');
+    }
+    final address = academy?.address;
+    if (address != null && address.isNotEmpty) {
+      buffer.writeln('📍 Location: $address');
+    }
+    buffer.writeln();
+    buffer.writeln('_Note: Verified digital receipt & ledger record from ClassKhata._');
+    buffer.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    final text = buffer.toString();
+    await Clipboard.setData(ClipboardData(text: text));
+
+    final uri = Uri.parse('https://wa.me/$formattedPhone?text=${Uri.encodeComponent(text)}');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('WhatsApp receipt opened and copied to clipboard!'),
+          backgroundColor: Color(0xFF16A34A),
+        ),
+      );
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open WhatsApp. Receipt copied to clipboard.')),
+      );
+    }
   }
 
   Future<void> _previewAllVouchers(List<FeeVoucher> vouchers) async {
@@ -179,15 +300,14 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
     // Fetch student mappings
     final studentsRes = await ref.read(studentRepositoryProvider).getStudents();
     final students = studentsRes.fold(onSuccess: (s) => s, onFailure: (_) => <Student>[]);
-    final studentNamesMap = {for (var s in students) s.id: s.name};
-    final studentRollsMap = {for (var s in students) s.id: s.rollNumber};
+    final studentNamesMap = {for (final s in students) s.id: s.name};
+    final studentRollsMap = {for (final s in students) s.id: s.rollNumber};
 
     if (!mounted) return;
 
     PdfPrintPreviewDialog.show(
       context,
       title: 'Batch Vouchers Preview (${vouchers.length} vouchers)',
-      initialFormat: PdfPageFormat.a4,
       pdfFileName: 'batch_vouchers_${filterState.monthYear ?? "all"}.pdf',
       buildPdf: (format) => PdfDocumentService.generateBatchVouchersPdf(
         vouchers: vouchers,
@@ -218,10 +338,10 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
                 Expanded(
                   child: academicDataAsync.when(
                     data: (data) => DropdownButtonFormField<int?>(
-                      value: filterState.batchId,
+                      initialValue: filterState.batchId,
                       decoration: const InputDecoration(labelText: 'Filter Batch'),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('All Batches')),
+                        const DropdownMenuItem(child: Text('All Batches')),
                         ...data.batches.map((b) => DropdownMenuItem(value: b.id, child: Text(b.name))),
                       ],
                       onChanged: (val) => ref.read(voucherFilterProvider.notifier).setBatchId(val),
@@ -233,10 +353,10 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<VoucherStatus?>(
-                    value: filterState.status,
+                    initialValue: filterState.status,
                     decoration: const InputDecoration(labelText: 'Status'),
                     items: const [
-                      DropdownMenuItem(value: null, child: Text('All Statuses')),
+                      DropdownMenuItem(child: Text('All Statuses')),
                       DropdownMenuItem(value: VoucherStatus.unpaid, child: Text('Unpaid')),
                       DropdownMenuItem(value: VoucherStatus.partial, child: Text('Partial')),
                       DropdownMenuItem(value: VoucherStatus.paid, child: Text('Paid')),
@@ -245,7 +365,7 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
                     onChanged: (val) => ref.read(voucherFilterProvider.notifier).setStatus(val),
                   ),
                 ),
-                if (vouchersAsync.valueOrNull?.isNotEmpty == true) ...[
+                if (vouchersAsync.valueOrNull?.isNotEmpty ?? false) ...[
                   const SizedBox(width: 16),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.print_outlined, size: 16),
@@ -303,10 +423,20 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
                             ),
                           ),
                           DataCell(
-                            IconButton(
-                              icon: const Icon(Icons.print_outlined, size: 18, color: AppColors.accent),
-                              tooltip: 'Preview & Print 3-Copy Voucher',
-                              onPressed: () => _previewVoucher(v),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.print_outlined, size: 18, color: AppColors.accent),
+                                  tooltip: 'Preview & Print 3-Copy Voucher',
+                                  onPressed: () => _previewVoucher(v),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.share, size: 18, color: Color(0xFF25D366)),
+                                  tooltip: 'Send WhatsApp Digital Receipt with Calculations',
+                                  onPressed: () => _shareVoucherWhatsApp(v),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -420,23 +550,23 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
   // ---------------------------------------------------------------------------
 
   Widget _buildApprovalsTab() {
-    return Card(
+    return const Card(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Maker-Checker Fee Adjustments & Waivers',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            const SizedBox(height: 4),
-            const Text(
+            SizedBox(height: 4),
+            Text(
               'Financial security rule: waivers, refunds, and cancellations require an independent checker approval.',
               style: TextStyle(color: AppColors.textMuted, fontSize: 13),
             ),
-            const Divider(height: 24),
-            const Expanded(
+            Divider(height: 24),
+            Expanded(
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

@@ -3,8 +3,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf/pdf.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../../../core/constants/payment_modes.dart';
 import '../../../../core/money/money.dart';
 import '../../../../core/printing/pdf_document_service.dart';
 import '../../../../core/security/permission_service.dart';
@@ -17,21 +17,21 @@ import '../../domain/entities/payroll_entities.dart';
 import '../providers/payroll_providers.dart';
 
 class PayslipDialog extends ConsumerStatefulWidget {
-  final PayrollRun run;
-  final String academyName;
 
   const PayslipDialog({
     super.key,
     required this.run,
     this.academyName = 'ClassKhata Academy',
   });
+  final PayrollRun run;
+  final String academyName;
 
   @override
   ConsumerState<PayslipDialog> createState() => _PayslipDialogState();
 }
 
 class _PayslipDialogState extends ConsumerState<PayslipDialog> {
-  String _paymentMode = 'cash';
+  String _paymentMode = PaymentModes.handCash;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -197,13 +197,10 @@ class _PayslipDialogState extends ConsumerState<PayslipDialog> {
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _paymentMode,
+                              initialValue: _paymentMode,
                               decoration: const InputDecoration(labelText: 'Disbursement Mode'),
-                              items: const [
-                                DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                                DropdownMenuItem(value: 'bank', child: Text('Bank Transfer')),
-                              ],
-                              onChanged: (val) => setState(() => _paymentMode = val ?? 'cash'),
+                              items: PaymentModes.dropdownItems,
+                              onChanged: (val) => setState(() => _paymentMode = val ?? PaymentModes.handCash),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -242,7 +239,6 @@ class _PayslipDialogState extends ConsumerState<PayslipDialog> {
                           PdfPrintPreviewDialog.show(
                             context,
                             title: 'Salary Payslip - ${run.staffName} (${run.monthYear})',
-                            initialFormat: PdfPageFormat.a4,
                             pdfFileName: 'payslip_${run.staffName.replaceAll(' ', '_')}_${run.monthYear}.pdf',
                             buildPdf: (format) => PdfDocumentService.generatePayslipPdf(
                               run: run,

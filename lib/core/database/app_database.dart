@@ -6,20 +6,22 @@
 library;
 
 import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:meta/meta.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
 import '../constants/app_constants.dart';
 import '../logging/app_logger.dart';
 import '../security/key_store.dart';
-import 'tables/core_tables.dart';
 import 'tables/academic_tables.dart';
+import 'tables/core_tables.dart';
 import 'tables/fee_tables.dart';
 import 'tables/finance_tables.dart';
-import 'tables/payroll_tables.dart';
 import 'tables/inventory_tables.dart';
+import 'tables/payroll_tables.dart';
 
 part 'app_database.g.dart';
 
@@ -66,7 +68,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase._(super.e);
 
   @visibleForTesting
-  AppDatabase.forTesting(QueryExecutor executor) : super(executor);
+  AppDatabase.forTesting(super.executor);
 
   /// Opens the encrypted database. Must be called after [KeyStore] is ready.
   static Future<AppDatabase> open() async {

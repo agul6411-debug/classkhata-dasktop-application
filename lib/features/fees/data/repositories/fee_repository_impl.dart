@@ -10,8 +10,8 @@ import '../../domain/repositories/fee_repository.dart';
 import '../datasources/fee_dao.dart';
 
 class FeeRepositoryImpl implements FeeRepository {
-  final FeeDao _dao;
   const FeeRepositoryImpl(this._dao);
+  final FeeDao _dao;
 
   @override
   Future<Result<List<FeeVoucher>>> getVouchers({

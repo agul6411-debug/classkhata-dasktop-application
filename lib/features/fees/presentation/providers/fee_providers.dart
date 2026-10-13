@@ -38,10 +38,6 @@ final defaulterAgingUseCaseProvider = Provider<DefaulterAgingUseCase>((ref) {
 
 /// Filter state for vouchers list
 class VoucherFilterState {
-  final int? batchId;
-  final int? studentId;
-  final VoucherStatus? status;
-  final String? monthYear;
 
   const VoucherFilterState({
     this.batchId,
@@ -49,6 +45,10 @@ class VoucherFilterState {
     this.status,
     this.monthYear,
   });
+  final int? batchId;
+  final int? studentId;
+  final VoucherStatus? status;
+  final String? monthYear;
 
   VoucherFilterState copyWith({
     int? Function()? batchId,

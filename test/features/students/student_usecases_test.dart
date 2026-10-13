@@ -1,9 +1,9 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:classkhata/core/errors/failures.dart';
 import 'package:classkhata/features/students/domain/entities/student_entities.dart';
 import 'package:classkhata/features/students/domain/repositories/student_repository.dart';
 import 'package:classkhata/features/students/domain/usecases/register_student_usecase.dart';
 import 'package:classkhata/features/students/domain/usecases/student_management_usecases.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class MockStudentRepository implements StudentRepository {
   final List<Student> students = [];

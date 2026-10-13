@@ -5,11 +5,13 @@
 library;
 
 import 'dart:io';
+
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/errors/failures.dart';
@@ -18,11 +20,11 @@ import '../../domain/entities/backup_meta.dart';
 import '../../domain/repositories/backup_repository.dart';
 
 class BackupRepositoryImpl implements BackupRepository {
-  final AppDatabase _db;
-  final Directory? _overrideAppDir;
 
   const BackupRepositoryImpl(this._db, {Directory? overrideAppDir})
       : _overrideAppDir = overrideAppDir;
+  final AppDatabase _db;
+  final Directory? _overrideAppDir;
 
   @override
   Future<Result<BackupMeta>> createBackup({
@@ -126,10 +128,12 @@ class BackupRepositoryImpl implements BackupRepository {
     try {
       // Verify first
       final verifyResult = await verifyBackup(backupId);
-      if (verifyResult.isFailure) return Failure(verifyResult.fold(
+      if (verifyResult.isFailure) {
+        return Failure(verifyResult.fold(
         onSuccess: (_) => const BackupFailure(''),
         onFailure: (f) => f,
       ));
+      }
       if (!verifyResult.valueOrThrow) {
         return const Failure(BackupFailure('Backup checksum mismatch. Restore aborted.'));
       }

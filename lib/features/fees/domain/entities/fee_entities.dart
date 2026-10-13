@@ -24,23 +24,6 @@ enum VoucherStatus {
 }
 
 class FeeVoucher extends Equatable {
-  final int id;
-  final String voucherNumber;
-  final int studentId;
-  final int batchId;
-  final String monthYear; // e.g. "2026-10"
-  final DateTime issueDate;
-  final DateTime dueDate;
-  final Money baseAmount;
-  final Money discount;
-  final Money lateFee;
-  final Money carryForward;
-  final Money totalDue;
-  final Money amountPaid;
-  final VoucherStatus status;
-  final DateTime createdAt;
-  final DateTime? reversedAt;
-  final String? reversalReason;
 
   const FeeVoucher({
     required this.id,
@@ -61,6 +44,23 @@ class FeeVoucher extends Equatable {
     this.reversedAt,
     this.reversalReason,
   });
+  final int id;
+  final String voucherNumber;
+  final int studentId;
+  final int batchId;
+  final String monthYear; // e.g. "2026-10"
+  final DateTime issueDate;
+  final DateTime dueDate;
+  final Money baseAmount;
+  final Money discount;
+  final Money lateFee;
+  final Money carryForward;
+  final Money totalDue;
+  final Money amountPaid;
+  final VoucherStatus status;
+  final DateTime createdAt;
+  final DateTime? reversedAt;
+  final String? reversalReason;
 
   /// The unpaid balance remaining on this voucher.
   Money get balanceRemaining => totalDue - amountPaid;
@@ -89,16 +89,6 @@ class FeeVoucher extends Equatable {
 }
 
 class Payment extends Equatable {
-  final int id;
-  final int voucherId;
-  final int studentId;
-  final int receiptId;
-  final Money amount;
-  final String paymentMode;
-  final String? referenceNumber;
-  final DateTime paymentDate;
-  final DateTime? reversedAt;
-  final String? reversalReason;
 
   const Payment({
     required this.id,
@@ -112,6 +102,16 @@ class Payment extends Equatable {
     this.reversedAt,
     this.reversalReason,
   });
+  final int id;
+  final int voucherId;
+  final int studentId;
+  final int receiptId;
+  final Money amount;
+  final String paymentMode;
+  final String? referenceNumber;
+  final DateTime paymentDate;
+  final DateTime? reversedAt;
+  final String? reversalReason;
 
   @override
   List<Object?> get props => [
@@ -128,15 +128,6 @@ class Payment extends Equatable {
 }
 
 class Receipt extends Equatable {
-  final int id;
-  final String receiptNumber;
-  final int voucherId;
-  final int studentId;
-  final Money amount;
-  final String qrData;
-  final DateTime receiptDate;
-  final bool isCancelled;
-  final String? cancellationReason;
 
   const Receipt({
     required this.id,
@@ -149,6 +140,15 @@ class Receipt extends Equatable {
     required this.isCancelled,
     this.cancellationReason,
   });
+  final int id;
+  final String receiptNumber;
+  final int voucherId;
+  final int studentId;
+  final Money amount;
+  final String qrData;
+  final DateTime receiptDate;
+  final bool isCancelled;
+  final String? cancellationReason;
 
   @override
   List<Object?> get props => [
@@ -164,14 +164,6 @@ class Receipt extends Equatable {
 }
 
 class DefaulterAgingRecord extends Equatable {
-  final int studentId;
-  final String studentName;
-  final String rollNumber;
-  final String guardianPhone;
-  final String batchName;
-  final Money totalOverdue;
-  final int daysOverdue; // e.g. 15, 35, 65, 95
-  final int overdueVouchersCount;
 
   const DefaulterAgingRecord({
     required this.studentId,
@@ -183,6 +175,14 @@ class DefaulterAgingRecord extends Equatable {
     required this.daysOverdue,
     required this.overdueVouchersCount,
   });
+  final int studentId;
+  final String studentName;
+  final String rollNumber;
+  final String guardianPhone;
+  final String batchName;
+  final Money totalOverdue;
+  final int daysOverdue; // e.g. 15, 35, 65, 95
+  final int overdueVouchersCount;
 
   /// Aging category
   String get bucket => switch (daysOverdue) {

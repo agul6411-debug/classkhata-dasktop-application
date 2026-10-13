@@ -7,8 +7,8 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 
 class AcademicDao {
-  final AppDatabase _db;
   const AcademicDao(this._db);
+  final AppDatabase _db;
 
   // ---------------------------------------------------------------------------
   // Sessions

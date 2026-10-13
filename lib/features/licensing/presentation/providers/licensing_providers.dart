@@ -28,12 +28,12 @@ final licenseInfoProvider = FutureProvider<LicenseInfo>((ref) async {
 });
 
 class LicenseController extends StateNotifier<AsyncValue<LicenseInfo?>> {
-  final LicensingRepository _repo;
-  final Ref _ref;
 
   LicenseController(this._repo, this._ref) : super(const AsyncValue.loading()) {
     refresh();
   }
+  final LicensingRepository _repo;
+  final Ref _ref;
 
   Future<void> refresh() async {
     state = const AsyncValue.loading();

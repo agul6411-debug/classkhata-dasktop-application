@@ -1,4 +1,3 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:classkhata/core/errors/failures.dart';
 import 'package:classkhata/core/money/money.dart';
 import 'package:classkhata/core/security/permission_service.dart';
@@ -6,6 +5,7 @@ import 'package:classkhata/features/fees/domain/entities/fee_entities.dart';
 import 'package:classkhata/features/fees/domain/repositories/fee_repository.dart';
 import 'package:classkhata/features/fees/domain/usecases/collect_fee_usecase.dart';
 import 'package:classkhata/features/fees/domain/usecases/fee_management_usecases.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class MockFeeRepository implements FeeRepository {
   final List<FeeVoucher> vouchers = [];
@@ -225,6 +225,22 @@ void main() {
         unauthorized.fold(onSuccess: (_) => null, onFailure: (f) => f),
         isA<PermissionFailure>(),
       );
+    });
+
+    test('FeeApprovalsUseCase allows self-approval when allowSingleAdminBypass is true', () async {
+      final adminPerms = permissionsForRole(AppRole.admin);
+
+      final soloAdminApproval = await approvalsUseCase.reviewAdjustment(
+        userPermissions: adminPerms,
+        requestId: 1,
+        requestedBy: 2,
+        reviewerId: 2,
+        approve: true,
+        reviewerNote: 'Solo school administrator direct approval',
+        allowSingleAdminBypass: true,
+      );
+
+      expect(soloAdminApproval.isSuccess, true);
     });
 
     test('FeeApprovalsUseCase succeeds when different user with admin permissions approves', () async {

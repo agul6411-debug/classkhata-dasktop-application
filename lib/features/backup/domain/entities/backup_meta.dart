@@ -2,13 +2,6 @@
 library;
 
 class BackupMeta {
-  final int id;
-  final String filePath;
-  final String type; // manual | auto | pre_migration
-  final int sizeBytes;
-  final String checksum;
-  final bool isVerified;
-  final DateTime createdAt;
 
   const BackupMeta({
     required this.id,
@@ -19,4 +12,11 @@ class BackupMeta {
     required this.isVerified,
     required this.createdAt,
   });
+  final int id;
+  final String filePath;
+  final String type; // manual | auto | pre_migration
+  final int sizeBytes;
+  final String checksum;
+  final bool isVerified;
+  final DateTime createdAt;
 }

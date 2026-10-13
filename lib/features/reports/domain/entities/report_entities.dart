@@ -49,11 +49,6 @@ enum ReportType {
 }
 
 class ReportFilter extends Equatable {
-  final ReportType reportType;
-  final DateTime startDate;
-  final DateTime endDate;
-  final String? batchFilter;
-  final String? monthYear;
 
   const ReportFilter({
     required this.reportType,
@@ -62,6 +57,11 @@ class ReportFilter extends Equatable {
     this.batchFilter,
     this.monthYear,
   });
+  final ReportType reportType;
+  final DateTime startDate;
+  final DateTime endDate;
+  final String? batchFilter;
+  final String? monthYear;
 
   ReportFilter copyWith({
     ReportType? reportType,
@@ -84,13 +84,6 @@ class ReportFilter extends Equatable {
 }
 
 class ReportData extends Equatable {
-  final ReportType type;
-  final String title;
-  final String subtitle;
-  final List<String> headers;
-  final List<List<String>> rows;
-  final Map<String, String> summaryMetrics;
-  final DateTime generatedAt;
 
   const ReportData({
     required this.type,
@@ -101,6 +94,13 @@ class ReportData extends Equatable {
     required this.summaryMetrics,
     required this.generatedAt,
   });
+  final ReportType type;
+  final String title;
+  final String subtitle;
+  final List<String> headers;
+  final List<List<String>> rows;
+  final Map<String, String> summaryMetrics;
+  final DateTime generatedAt;
 
   bool get isEmpty => rows.isEmpty;
   int get totalRows => rows.length;

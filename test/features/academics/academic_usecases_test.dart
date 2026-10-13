@@ -1,9 +1,9 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:classkhata/core/errors/failures.dart';
 import 'package:classkhata/core/money/money.dart';
 import 'package:classkhata/features/academics/domain/entities/academic_entities.dart';
 import 'package:classkhata/features/academics/domain/repositories/academic_repository.dart';
 import 'package:classkhata/features/academics/domain/usecases/academic_usecases.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 // Mock repository for testing use case business rules
 class MockAcademicRepository implements AcademicRepository {
@@ -181,45 +181,45 @@ void main() {
       final s1 = AcademicSession(
         id: 1,
         name: '2025-2026',
-        startDate: DateTime(2025, 4, 1),
+        startDate: DateTime(2025, 4),
         endDate: DateTime(2026, 3, 31),
         isCurrent: false,
       );
       final s2 = AcademicSession(
         id: 2,
         name: '2026-2027',
-        startDate: DateTime(2026, 4, 1),
+        startDate: DateTime(2026, 4),
         endDate: DateTime(2027, 3, 31),
         isCurrent: true,
       );
-      final c1 = Course(id: 10, name: 'Class 9', code: 'CL-09');
-      final c2 = Course(id: 11, name: 'Class 10', code: 'CL-10');
-      final b1 = Batch(
+      const c1 = Course(id: 10, name: 'Class 9', code: 'CL-09');
+      const c2 = Course(id: 11, name: 'Class 10', code: 'CL-10');
+      const b1 = Batch(
         id: 100,
         sessionId: 2,
         courseId: 10,
         name: 'Section A',
-        monthlyFee: const Money(350000),
+        monthlyFee: Money(350000),
         dueDay: 10,
         isActive: true,
         instructorName: 'Mr. Ahmed',
         timing: 'Room 12',
       );
-      final b2 = Batch(
+      const b2 = Batch(
         id: 101,
         sessionId: 2,
         courseId: 10,
         name: 'Section B',
-        monthlyFee: const Money(350000),
+        monthlyFee: Money(350000),
         dueDay: 10,
         isActive: true,
       );
-      final b3 = Batch(
+      const b3 = Batch(
         id: 102,
         sessionId: 2,
         courseId: 11,
         name: 'Section A',
-        monthlyFee: const Money(400000),
+        monthlyFee: Money(400000),
         dueDay: 10,
         isActive: true,
       );

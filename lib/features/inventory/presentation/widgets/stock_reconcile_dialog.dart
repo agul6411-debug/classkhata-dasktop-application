@@ -98,7 +98,6 @@ class _StockReconcileDialogState extends ConsumerState<StockReconcileDialog> {
     final discrepancy = actualParsed != null ? actualParsed - _currentRecordedQty : 0;
 
     return Dialog(
-      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
@@ -111,9 +110,9 @@ class _StockReconcileDialogState extends ConsumerState<StockReconcileDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Physical Stock-Take Audit',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.heading),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.headingCol(context)),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, size: 20),

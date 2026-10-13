@@ -1,9 +1,9 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:classkhata/core/money/money.dart';
 import 'package:classkhata/core/security/permission_service.dart';
 import 'package:classkhata/features/payroll/domain/entities/payroll_entities.dart';
 import 'package:classkhata/features/payroll/domain/repositories/payroll_repository.dart';
 import 'package:classkhata/features/payroll/domain/usecases/payroll_usecases.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Payroll Calculation & Domain Logic', () {
@@ -79,7 +79,7 @@ void main() {
 
     test('CalculateSalaryEngine clamps negative net salary to zero', () {
       final base = Money.fromRupees(10000);
-      final allowances = const Money(0);
+      const allowances = Money(0);
       final deductions = Money.fromRupees(5000);
       final advanceRecovery = Money.fromRupees(15000);
 

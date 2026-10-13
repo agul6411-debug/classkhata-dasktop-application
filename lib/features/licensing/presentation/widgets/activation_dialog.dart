@@ -11,8 +11,8 @@ import '../../../../shared/widgets/primary_button.dart';
 import '../providers/licensing_providers.dart';
 
 class ActivationDialog extends ConsumerStatefulWidget {
-  final String machineId;
   const ActivationDialog({super.key, required this.machineId});
+  final String machineId;
 
   @override
   ConsumerState<ActivationDialog> createState() => _ActivationDialogState();

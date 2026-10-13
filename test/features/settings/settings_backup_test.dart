@@ -1,12 +1,12 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:classkhata/core/constants/app_constants.dart';
 import 'package:classkhata/core/security/audit_chain.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Settings, Backup Integrity & Audit Chain Verification', () {
     test('Audit chain computes SHA-256 and verifies intact sequence', () {
-      final now1 = DateTime(2026, 10, 11, 10, 0, 0);
-      final now2 = DateTime(2026, 10, 11, 10, 5, 0);
+      final now1 = DateTime(2026, 10, 11, 10);
+      final now2 = DateTime(2026, 10, 11, 10, 5);
 
       // Entry 1 (Genesis)
       final hash1 = computeAuditHash(
@@ -61,7 +61,7 @@ void main() {
     });
 
     test('Audit chain detects tampered records or modified hashes', () {
-      final now = DateTime(2026, 10, 11, 12, 0, 0);
+      final now = DateTime(2026, 10, 11, 12);
 
       // Tampered entry with fraudulent hash
       final tamperedEntry = AuditEntry(
@@ -80,8 +80,8 @@ void main() {
     });
 
     test('Audit chain detects broken link between consecutive records', () {
-      final now1 = DateTime(2026, 10, 11, 14, 0, 0);
-      final now2 = DateTime(2026, 10, 11, 14, 1, 0);
+      final now1 = DateTime(2026, 10, 11, 14);
+      final now2 = DateTime(2026, 10, 11, 14, 1);
 
       final hash1 = computeAuditHash(
         action: 'expense.created',

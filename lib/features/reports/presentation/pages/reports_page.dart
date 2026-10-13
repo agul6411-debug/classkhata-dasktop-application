@@ -2,10 +2,10 @@
 library;
 
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf/pdf.dart';
-import 'package:printing/printing.dart';
 
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/security/permission_service.dart';
@@ -13,10 +13,9 @@ import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../domain/entities/report_entities.dart';
 import '../providers/reports_providers.dart';
-
-import '../../../settings/presentation/providers/settings_providers.dart';
 
 class ReportsPage extends ConsumerStatefulWidget {
   const ReportsPage({super.key});
@@ -131,9 +130,13 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   Widget build(BuildContext context) {
     final filter = ref.watch(selectedReportFilterProvider);
     final reportDataAsync = ref.watch(activeReportDataProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headingColor = isDark ? AppColors.darkTextPrimary : AppColors.heading;
+    final textMutedColor = isDark ? AppColors.darkTextSecondary : AppColors.textMuted;
+    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.surface;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.border;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -146,14 +149,14 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Reports & Statements',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.heading),
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: headingColor),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Financial audit reports, aging statements, and formula-sanitized exports.',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      style: TextStyle(color: textMutedColor, fontSize: 13),
                     ),
                   ],
                 ),
@@ -163,12 +166,20 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       OutlinedButton.icon(
                         icon: const Icon(Icons.picture_as_pdf, size: 16, color: Colors.redAccent),
                         label: const Text('Print A4 (PDF)'),
-                        onPressed: _isExporting ? null : () => _exportPdf(data, isThermal: false),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: isDark ? AppColors.darkBorder : Colors.redAccent),
+                          foregroundColor: isDark ? Colors.red.shade300 : Colors.redAccent,
+                        ),
+                        onPressed: _isExporting ? null : () => _exportPdf(data),
                       ),
                       const SizedBox(width: 8),
                       OutlinedButton.icon(
-                        icon: const Icon(Icons.receipt_long, size: 16, color: AppColors.accent),
+                        icon: const Icon(Icons.receipt_long, size: 16, color: AppColors.accentLight),
                         label: const Text('Thermal (80mm)'),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.accent),
+                          foregroundColor: isDark ? AppColors.accentLight : AppColors.accent,
+                        ),
                         onPressed: _isExporting ? null : () => _exportPdf(data, isThermal: true),
                       ),
                       const SizedBox(width: 12),
@@ -190,9 +201,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: surfaceColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: borderColor),
               ),
               child: Row(
                 children: [
@@ -200,7 +211,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   Expanded(
                     flex: 3,
                     child: DropdownButtonFormField<ReportType>(
-                      value: filter.reportType,
+                      initialValue: filter.reportType,
                       decoration: const InputDecoration(labelText: 'Report Type'),
                       isExpanded: true,
                       items: ReportType.values.map((t) {
@@ -294,7 +305,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
             // Report Content Area
             Expanded(
               child: reportDataAsync.when(
-                data: (data) => _buildReportView(data),
+                data: (data) => _buildReportView(data, isDark, surfaceColor, borderColor, headingColor, textMutedColor),
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, _) => Center(
                   child: Text('Error generating report: $err', style: const TextStyle(color: Colors.red)),
@@ -307,7 +318,14 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     );
   }
 
-  Widget _buildReportView(ReportData data) {
+  Widget _buildReportView(
+    ReportData data,
+    bool isDark,
+    Color surfaceColor,
+    Color borderColor,
+    Color headingColor,
+    Color textMutedColor,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -320,17 +338,17 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: surfaceColor,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: borderColor),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(e.key, style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.bold)),
+                    Text(e.key, style: TextStyle(color: textMutedColor, fontSize: 11, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 2),
-                    Text(e.value, style: const TextStyle(color: AppColors.heading, fontSize: 15, fontWeight: FontWeight.bold)),
+                    Text(e.value, style: TextStyle(color: headingColor, fontSize: 15, fontWeight: FontWeight.bold)),
                   ],
                 ),
               );
@@ -343,25 +361,25 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: surfaceColor,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: borderColor),
             ),
             child: data.rows.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.receipt_outlined, size: 48, color: AppColors.textMuted),
+                        Icon(Icons.receipt_outlined, size: 48, color: textMutedColor),
                         const SizedBox(height: 8),
                         Text('No records matching criteria for ${data.title}.',
-                            style: const TextStyle(color: AppColors.textMuted)),
+                            style: TextStyle(color: textMutedColor)),
                       ],
                     ),
                   )
                 : SingleChildScrollView(
                     child: DataTable(
-                      headingRowColor: WidgetStateProperty.all(AppColors.background),
+                      headingRowColor: WidgetStateProperty.all(isDark ? AppColors.darkCardSub : AppColors.background),
                       columns: data.headers
                           .map((h) => DataColumn(label: Text(h, style: const TextStyle(fontWeight: FontWeight.bold))))
                           .toList(),

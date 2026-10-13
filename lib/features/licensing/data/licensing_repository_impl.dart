@@ -4,7 +4,6 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
@@ -20,11 +19,6 @@ import 'hardware_identity.dart';
 import 'licensing_public_key.dart';
 
 class LicensingRepositoryImpl implements LicensingRepository {
-  final AppDatabase _db;
-  final String? _mockMachineId;
-  final Directory? _overrideStorageDir;
-
-  static const String _trialSalt = 'CK_TRIAL_SECURITY_SALT_2026';
 
   LicensingRepositoryImpl(
     this._db, {
@@ -32,6 +26,11 @@ class LicensingRepositoryImpl implements LicensingRepository {
     Directory? overrideStorageDir,
   })  : _mockMachineId = mockMachineId,
         _overrideStorageDir = overrideStorageDir;
+  final AppDatabase _db;
+  final String? _mockMachineId;
+  final Directory? _overrideStorageDir;
+
+  static const String _trialSalt = 'CK_TRIAL_SECURITY_SALT_2026';
 
   String get machineId => HardwareIdentity.getMachineId(mockSeed: _mockMachineId);
 

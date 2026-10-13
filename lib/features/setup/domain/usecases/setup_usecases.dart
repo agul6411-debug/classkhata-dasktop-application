@@ -8,9 +8,9 @@ import '../repositories/setup_repository.dart';
 
 /// Validates setup input and delegates to the repository.
 class RunSetupUseCase {
-  final SetupRepository _repository;
 
   const RunSetupUseCase(this._repository);
+  final SetupRepository _repository;
 
   Future<Result<String>> call(SetupData data) async {
     // Validate academy name
@@ -25,7 +25,7 @@ class RunSetupUseCase {
       return const Failure(ValidationFailure('Admin email is required.'));
     }
     if (data.adminPassword.length < AppConstants.minPasswordLength) {
-      return Failure(
+      return const Failure(
         ValidationFailure(
           'Password must be at least ${AppConstants.minPasswordLength} characters.',
         ),
@@ -37,9 +37,9 @@ class RunSetupUseCase {
 
 /// Check-setup use case.
 class CheckSetupUseCase {
-  final SetupRepository _repository;
 
   const CheckSetupUseCase(this._repository);
+  final SetupRepository _repository;
 
   Future<Result<bool>> call() => _repository.isSetupComplete();
 }

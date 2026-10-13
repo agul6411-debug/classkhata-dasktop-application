@@ -4,22 +4,39 @@ library;
 import 'package:equatable/equatable.dart';
 import '../../../../core/money/money.dart';
 
-class DashboardAlert extends Equatable {
-  final String title;
-  final String message;
-  final String severity; // 'warning', 'info', 'critical'
+class DashboardAlert extends Equatable { // 'warning', 'info', 'critical'
 
   const DashboardAlert({
     required this.title,
     required this.message,
     this.severity = 'warning',
   });
+  final String title;
+  final String message;
+  final String severity;
 
   @override
   List<Object?> get props => [title, message, severity];
 }
 
 class DashboardKpis extends Equatable {
+
+  const DashboardKpis({
+    required this.monthYear,
+    required this.expectedTotal,
+    required this.collectedTotal,
+    required this.pendingTotal,
+    required this.overdueTotal,
+    required this.studentsCount,
+    required this.coursesCount,
+    required this.batchesCount,
+    this.staffCount = 0,
+    required this.paidCount,
+    required this.partialCount,
+    required this.unpaidCount,
+    required this.overdueCount,
+    this.alerts = const [],
+  });
   final String monthYear;
   final Money expectedTotal;
   final Money collectedTotal;
@@ -40,23 +57,6 @@ class DashboardKpis extends Equatable {
 
   // Actionable Alerts
   final List<DashboardAlert> alerts;
-
-  const DashboardKpis({
-    required this.monthYear,
-    required this.expectedTotal,
-    required this.collectedTotal,
-    required this.pendingTotal,
-    required this.overdueTotal,
-    required this.studentsCount,
-    required this.coursesCount,
-    required this.batchesCount,
-    this.staffCount = 0,
-    required this.paidCount,
-    required this.partialCount,
-    required this.unpaidCount,
-    required this.overdueCount,
-    this.alerts = const [],
-  });
 
   double get collectionPercentage {
     if (expectedTotal.isZero) return 0.0;

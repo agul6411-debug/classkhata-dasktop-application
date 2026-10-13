@@ -39,8 +39,12 @@ class _InventoryPageState extends ConsumerState<InventoryPage> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headingColor = isDark ? AppColors.darkTextPrimary : AppColors.heading;
+    final textMutedColor = isDark ? AppColors.darkTextSecondary : AppColors.textMuted;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.border;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -53,14 +57,14 @@ class _InventoryPageState extends ConsumerState<InventoryPage> with SingleTicker
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Inventory & Stock Management',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.heading),
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: headingColor),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Append-only stock ledger, suppliers, multi-item purchases, fee voucher charges, and stock-take audit (no barcodes).',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      style: TextStyle(color: textMutedColor, fontSize: 13),
                     ),
                   ],
                 ),
@@ -69,6 +73,10 @@ class _InventoryPageState extends ConsumerState<InventoryPage> with SingleTicker
                     OutlinedButton.icon(
                       icon: const Icon(Icons.outbox, size: 16),
                       label: const Text('Issue Item'),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.accent),
+                        foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.accent,
+                      ),
                       onPressed: () => showDialog<bool>(
                         context: context,
                         builder: (_) => const ItemIssuanceDialog(),
@@ -78,6 +86,10 @@ class _InventoryPageState extends ConsumerState<InventoryPage> with SingleTicker
                     OutlinedButton.icon(
                       icon: const Icon(Icons.shopping_cart, size: 16),
                       label: const Text('New Purchase'),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.accent),
+                        foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.accent,
+                      ),
                       onPressed: () => showDialog<bool>(
                         context: context,
                         builder: (_) => const PurchaseFormDialog(),
@@ -87,6 +99,10 @@ class _InventoryPageState extends ConsumerState<InventoryPage> with SingleTicker
                     OutlinedButton.icon(
                       icon: const Icon(Icons.rule, size: 16),
                       label: const Text('Reconcile Count'),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.accent),
+                        foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.accent,
+                      ),
                       onPressed: () => showDialog<bool>(
                         context: context,
                         builder: (_) => const StockReconcileDialog(),
@@ -96,6 +112,10 @@ class _InventoryPageState extends ConsumerState<InventoryPage> with SingleTicker
                     OutlinedButton.icon(
                       icon: const Icon(Icons.swap_horiz, size: 16),
                       label: const Text('Stock In / Out'),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.accent),
+                        foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.accent,
+                      ),
                       onPressed: () => showDialog<bool>(
                         context: context,
                         builder: (_) => const StockMovementDialog(),
@@ -118,12 +138,12 @@ class _InventoryPageState extends ConsumerState<InventoryPage> with SingleTicker
 
             // Tab bar
             Container(
-              decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
+              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: borderColor))),
               child: TabBar(
                 controller: _tabController,
-                labelColor: AppColors.accent,
-                unselectedLabelColor: AppColors.textMuted,
-                indicatorColor: AppColors.accent,
+                labelColor: isDark ? AppColors.accentLight : AppColors.accent,
+                unselectedLabelColor: isDark ? AppColors.darkTextSecondary : AppColors.textMuted,
+                indicatorColor: isDark ? AppColors.accentLight : AppColors.accent,
                 isScrollable: true,
                 tabs: const [
                   Tab(icon: Icon(Icons.inventory_2_outlined), text: 'Items Catalog'),
@@ -184,7 +204,7 @@ class _ItemsCatalogTab extends ConsumerWidget {
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('All Categories')),
+                    const DropdownMenuItem(child: Text('All Categories')),
                     ...categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
                   ],
                   onChanged: (id) => ref.read(inventoryFilterCategoryProvider.notifier).state = id,
@@ -222,13 +242,13 @@ class _ItemsCatalogTab extends ConsumerWidget {
               }
               return Container(
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: AppColors.cardBg(context),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: AppColors.borderCol(context)),
                 ),
                 child: ListView.separated(
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                  separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.borderCol(context)),
                   itemBuilder: (context, idx) {
                     final item = items[idx];
                     return ListTile(
@@ -310,13 +330,13 @@ class _MovementsAndIssuesTab extends ConsumerWidget {
                     }
                     return Container(
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: AppColors.cardBg(context),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.borderCol(context)),
                       ),
                       child: ListView.separated(
                         itemCount: movements.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                        separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.borderCol(context)),
                         itemBuilder: (context, idx) {
                           final m = movements[idx];
                           final isIn = m.isIn;
@@ -364,13 +384,13 @@ class _MovementsAndIssuesTab extends ConsumerWidget {
                     }
                     return Container(
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: AppColors.cardBg(context),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.borderCol(context)),
                       ),
                       child: ListView.separated(
                         itemCount: issuances.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                        separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.borderCol(context)),
                         itemBuilder: (context, idx) {
                           final iss = issuances[idx];
                           return ListTile(
@@ -445,13 +465,13 @@ class _SuppliersAndPurchasesTab extends ConsumerWidget {
                     }
                     return Container(
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: AppColors.cardBg(context),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.borderCol(context)),
                       ),
                       child: ListView.separated(
                         itemCount: suppliers.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                        separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.borderCol(context)),
                         itemBuilder: (context, idx) {
                           final s = suppliers[idx];
                           return ListTile(
@@ -524,13 +544,13 @@ class _SuppliersAndPurchasesTab extends ConsumerWidget {
                     }
                     return Container(
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: AppColors.cardBg(context),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.borderCol(context)),
                       ),
                       child: ListView.separated(
                         itemCount: purchases.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                        separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.borderCol(context)),
                         itemBuilder: (context, idx) {
                           final p = purchases[idx];
                           return ListTile(
@@ -580,9 +600,9 @@ class _StockTakeAuditTab extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.cardBg(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: AppColors.borderCol(context)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -638,9 +658,9 @@ class _StockValuationTab extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: AppColors.cardBg(context),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: AppColors.borderCol(context)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -661,9 +681,9 @@ class _StockValuationTab extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: AppColors.cardBg(context),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: AppColors.borderCol(context)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -673,7 +693,7 @@ class _StockValuationTab extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Text(
                           report.totalItemsCount.toString(),
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.heading),
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.headingCol(context)),
                         ),
                       ],
                     ),
@@ -684,9 +704,9 @@ class _StockValuationTab extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: AppColors.cardBg(context),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: AppColors.borderCol(context)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -714,13 +734,13 @@ class _StockValuationTab extends ConsumerWidget {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: AppColors.cardBg(context),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: AppColors.borderCol(context)),
                 ),
                 child: ListView.separated(
                   itemCount: report.items.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                  separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.borderCol(context)),
                   itemBuilder: (context, idx) {
                     final item = report.items[idx];
                     return ListTile(

@@ -1,12 +1,11 @@
-import 'package:drift/drift.dart' hide isNull, isNotNull;
-import 'package:drift/native.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:classkhata/core/database/app_database.dart';
 import 'package:classkhata/core/money/money.dart';
 import 'package:classkhata/core/utils/validators.dart';
 import 'package:classkhata/features/reports/data/repositories/reports_repository_impl.dart';
 import 'package:classkhata/features/reports/domain/entities/report_entities.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late AppDatabase db;
@@ -20,7 +19,7 @@ void main() {
     final sessionId = await db.into(db.academicSessionsTable).insert(
           AcademicSessionsTableCompanion.insert(
             name: '2026-2027',
-            startDate: DateTime(2026, 1, 1),
+            startDate: DateTime(2026),
             endDate: DateTime(2026, 12, 31),
           ),
         );
@@ -53,7 +52,7 @@ void main() {
             name: 'Bilal Ahmed',
             guardianPhone: '03001234567',
             batchId: batchId,
-            joiningDate: Value(DateTime(2026, 1, 1)),
+            joiningDate: Value(DateTime(2026)),
           ),
         );
 
@@ -64,7 +63,7 @@ void main() {
             studentId: studentId,
             batchId: batchId,
             monthYear: '2026-03',
-            issueDate: DateTime(2026, 3, 1),
+            issueDate: DateTime(2026, 3),
             dueDate: DateTime(2026, 3, 10),
             baseAmountPaisa: const Value(600000),
             totalDuePaisa: const Value(600000),
@@ -79,7 +78,7 @@ void main() {
             studentId: studentId,
             batchId: batchId,
             monthYear: '2026-04',
-            issueDate: DateTime(2026, 4, 1),
+            issueDate: DateTime(2026, 4),
             dueDate: DateTime(2026, 4, 10),
             baseAmountPaisa: const Value(600000),
             totalDuePaisa: const Value(600000),
@@ -98,7 +97,7 @@ void main() {
       final res = await repo.buildReport(
         ReportFilter(
           reportType: ReportType.batchWiseFees,
-          startDate: DateTime(2026, 1, 1),
+          startDate: DateTime(2026),
           endDate: DateTime(2026, 12, 31),
         ),
       );
@@ -114,20 +113,20 @@ void main() {
       // Pending: 12,000 - 10,000 = 2,000
       expect(batchRow[0], equals('Morning Alpha'));
       expect(batchRow[2], equals('2')); // 2 vouchers
-      expect(batchRow[3], equals(Money.fromPaisa(1200000).format()));
-      expect(batchRow[4], equals(Money.fromPaisa(1000000).format()));
-      expect(batchRow[5], equals(Money.fromPaisa(200000).format()));
+      expect(batchRow[3], equals(const Money.fromPaisa(1200000).format()));
+      expect(batchRow[4], equals(const Money.fromPaisa(1000000).format()));
+      expect(batchRow[5], equals(const Money.fromPaisa(200000).format()));
 
-      expect(report.summaryMetrics['Total Invoiced'], equals(Money.fromPaisa(1200000).format()));
-      expect(report.summaryMetrics['Total Collected'], equals(Money.fromPaisa(1000000).format()));
-      expect(report.summaryMetrics['Total Pending'], equals(Money.fromPaisa(200000).format()));
+      expect(report.summaryMetrics['Total Invoiced'], equals(const Money.fromPaisa(1200000).format()));
+      expect(report.summaryMetrics['Total Collected'], equals(const Money.fromPaisa(1000000).format()));
+      expect(report.summaryMetrics['Total Pending'], equals(const Money.fromPaisa(200000).format()));
     });
 
     test('Course-wise fee report matches raw course aggregates accurately', () async {
       final res = await repo.buildReport(
         ReportFilter(
           reportType: ReportType.courseWiseFees,
-          startDate: DateTime(2026, 1, 1),
+          startDate: DateTime(2026),
           endDate: DateTime(2026, 12, 31),
         ),
       );
@@ -140,16 +139,16 @@ void main() {
 
       expect(courseRow[0], equals('CS101'));
       expect(courseRow[1], equals('Computer Science'));
-      expect(courseRow[3], equals(Money.fromPaisa(1200000).format()));
-      expect(courseRow[4], equals(Money.fromPaisa(1000000).format()));
-      expect(courseRow[5], equals(Money.fromPaisa(200000).format()));
+      expect(courseRow[3], equals(const Money.fromPaisa(1200000).format()));
+      expect(courseRow[4], equals(const Money.fromPaisa(1000000).format()));
+      expect(courseRow[5], equals(const Money.fromPaisa(200000).format()));
     });
 
     test('Generates thermal 80mm PDF roll bytes without failure', () async {
       final reportRes = await repo.buildReport(
         ReportFilter(
           reportType: ReportType.batchWiseFees,
-          startDate: DateTime(2026, 1, 1),
+          startDate: DateTime(2026),
           endDate: DateTime(2026, 12, 31),
         ),
       );

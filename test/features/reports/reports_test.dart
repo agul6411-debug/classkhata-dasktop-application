@@ -1,10 +1,10 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:classkhata/core/security/permission_service.dart';
 import 'package:classkhata/core/utils/validators.dart';
 import 'package:classkhata/features/reports/domain/entities/report_entities.dart';
 import 'package:classkhata/features/reports/domain/repositories/reports_repository.dart';
 import 'package:classkhata/features/reports/domain/usecases/export_report_usecases.dart';
 import 'package:classkhata/features/reports/domain/usecases/generate_report_usecase.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Reports Domain & Export Logic', () {
@@ -43,8 +43,8 @@ void main() {
       final useCase = GenerateReportUseCase(_MockReportsRepo());
       final filter = ReportFilter(
         reportType: ReportType.feeCollectionSummary,
-        startDate: DateTime(2026, 12, 1),
-        endDate: DateTime(2026, 10, 1), // Invalid: end before start
+        startDate: DateTime(2026, 12),
+        endDate: DateTime(2026, 10), // Invalid: end before start
       );
 
       final res = await useCase(
@@ -59,7 +59,7 @@ void main() {
       final useCase = GenerateReportUseCase(_MockReportsRepo());
       final filter = ReportFilter(
         reportType: ReportType.feeCollectionSummary,
-        startDate: DateTime(2026, 10, 1),
+        startDate: DateTime(2026, 10),
         endDate: DateTime(2026, 10, 31),
       );
 

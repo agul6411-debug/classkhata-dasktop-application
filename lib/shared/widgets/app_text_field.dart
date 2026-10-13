@@ -4,21 +4,6 @@ library;
 import 'package:flutter/material.dart';
 
 class AppTextField extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final String? hint;
-  final bool obscureText;
-  final TextInputType? keyboardType;
-  final Widget? suffixIcon;
-  final Widget? prefixIcon;
-  final String? Function(String?)? validator;
-  final void Function(String)? onFieldSubmitted;
-  final void Function(String)? onChanged;
-  final int? maxLines;
-  final int? maxLength;
-  final bool readOnly;
-  final bool autofocus;
-  final TextInputAction? textInputAction;
 
   const AppTextField({
     super.key,
@@ -38,6 +23,21 @@ class AppTextField extends StatelessWidget {
     this.autofocus = false,
     this.textInputAction,
   });
+  final TextEditingController controller;
+  final String label;
+  final String? hint;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+  final Widget? suffixIcon;
+  final Widget? prefixIcon;
+  final String? Function(String?)? validator;
+  final void Function(String)? onFieldSubmitted;
+  final void Function(String)? onChanged;
+  final int? maxLines;
+  final int? maxLength;
+  final bool readOnly;
+  final bool autofocus;
+  final TextInputAction? textInputAction;
 
   @override
   Widget build(BuildContext context) {

@@ -2,18 +2,12 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:pdf/pdf.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/printing/pdf_document_service.dart';
 import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
 import '../../domain/entities/student_entities.dart';
 
 class StudentIdCardDialog extends StatelessWidget {
-  final Student student;
-  final String batchName;
-  final String academyName;
-  final String? academyPhone;
-  final String? academyAddress;
 
   const StudentIdCardDialog({
     super.key,
@@ -23,6 +17,11 @@ class StudentIdCardDialog extends StatelessWidget {
     this.academyPhone,
     this.academyAddress,
   });
+  final Student student;
+  final String batchName;
+  final String academyName;
+  final String? academyPhone;
+  final String? academyAddress;
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +146,6 @@ class StudentIdCardDialog extends StatelessWidget {
                         PdfPrintPreviewDialog.show(
                           context,
                           title: 'Student ID Card - ${student.name}',
-                          initialFormat: PdfPageFormat.a4,
                           pdfFileName: 'id_card_${student.rollNumber}.pdf',
                           buildPdf: (format) => PdfDocumentService.generateStudentIdCardPdf(
                             student: student,

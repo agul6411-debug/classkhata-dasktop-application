@@ -11,8 +11,8 @@ import '../../domain/repositories/academic_repository.dart';
 import '../datasources/academic_dao.dart';
 
 class AcademicRepositoryImpl implements AcademicRepository {
-  final AcademicDao _dao;
   const AcademicRepositoryImpl(this._dao);
+  final AcademicDao _dao;
 
   @override
   Future<Result<List<AcademicSession>>> getSessions() async {

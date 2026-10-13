@@ -11,11 +11,6 @@ import 'package:printing/printing.dart';
 import '../../app/theme/app_theme.dart';
 
 class PdfPrintPreviewDialog extends StatelessWidget {
-  final String title;
-  final Future<Uint8List> Function(PdfPageFormat format) buildPdf;
-  final PdfPageFormat initialFormat;
-  final Map<String, PdfPageFormat>? pageFormats;
-  final String pdfFileName;
 
   const PdfPrintPreviewDialog({
     super.key,
@@ -25,6 +20,11 @@ class PdfPrintPreviewDialog extends StatelessWidget {
     this.pageFormats,
     this.pdfFileName = 'document.pdf',
   });
+  final String title;
+  final Future<Uint8List> Function(PdfPageFormat format) buildPdf;
+  final PdfPageFormat initialFormat;
+  final Map<String, PdfPageFormat>? pageFormats;
+  final String pdfFileName;
 
   /// Displays the print preview dialog modally.
   static Future<void> show(
@@ -37,7 +37,6 @@ class PdfPrintPreviewDialog extends StatelessWidget {
   }) {
     return showDialog<void>(
       context: context,
-      barrierDismissible: true,
       builder: (ctx) => PdfPrintPreviewDialog(
         title: title,
         buildPdf: buildPdf,
@@ -68,8 +67,9 @@ class PdfPrintPreviewDialog extends StatelessWidget {
         width: dialogWidth,
         height: dialogHeight,
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.cardBg(context),
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderCol(context)),
           boxShadow: const [
             BoxShadow(
               color: Colors.black26,
@@ -85,10 +85,10 @@ class PdfPrintPreviewDialog extends StatelessWidget {
             // Dialog Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              decoration: const BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                border: Border(bottom: BorderSide(color: AppColors.border)),
+              decoration: BoxDecoration(
+                color: AppColors.subCardBg(context),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                border: Border(bottom: BorderSide(color: AppColors.borderCol(context))),
               ),
               child: Row(
                 children: [
@@ -97,10 +97,10 @@ class PdfPrintPreviewDialog extends StatelessWidget {
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.heading,
+                        color: AppColors.headingCol(context),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -123,8 +123,6 @@ class PdfPrintPreviewDialog extends StatelessWidget {
                   build: buildPdf,
                   initialPageFormat: initialFormat,
                   pageFormats: defaultFormats,
-                  canChangePageFormat: true,
-                  canChangeOrientation: true,
                   canDebug: false,
                   pdfFileName: pdfFileName,
                   loadingWidget: const Center(

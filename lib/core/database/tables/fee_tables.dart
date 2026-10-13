@@ -7,8 +7,9 @@
 library;
 
 import 'package:drift/drift.dart';
-import 'core_tables.dart';
+
 import 'academic_tables.dart';
+import 'core_tables.dart';
 
 // ---------------------------------------------------------------------------
 // Fee Structures (per Batch or Course)

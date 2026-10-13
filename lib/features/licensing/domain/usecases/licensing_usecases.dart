@@ -6,24 +6,24 @@ import '../entities/license_entities.dart';
 import '../repositories/licensing_repository.dart';
 
 class GetLicenseStatusUseCase {
-  final LicensingRepository _repository;
   const GetLicenseStatusUseCase(this._repository);
+  final LicensingRepository _repository;
 
   Future<Result<LicenseInfo>> call({DateTime? overrideNow}) =>
       _repository.getLicenseInfo(overrideNow: overrideNow);
 }
 
 class ActivateLicenseUseCase {
-  final LicensingRepository _repository;
   const ActivateLicenseUseCase(this._repository);
+  final LicensingRepository _repository;
 
   Future<Result<LicenseInfo>> call(String licenseKey) =>
       _repository.activateLicense(licenseKey);
 }
 
 class VerifyFinancialActionAllowedUseCase {
-  final LicensingRepository _repository;
   const VerifyFinancialActionAllowedUseCase(this._repository);
+  final LicensingRepository _repository;
 
   Future<Result<bool>> call() async {
     final infoRes = await _repository.getLicenseInfo();
