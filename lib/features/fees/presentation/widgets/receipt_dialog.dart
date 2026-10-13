@@ -2,9 +2,12 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../../../core/printing/pdf_document_service.dart';
+import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
 import '../../domain/entities/fee_entities.dart';
 
 class ReceiptDialog extends StatelessWidget {
@@ -13,6 +16,10 @@ class ReceiptDialog extends StatelessWidget {
   final String guardianPhone;
   final String voucherNumber;
   final String academyName;
+  final String? rollNumber;
+  final String? batchName;
+  final String? academyPhone;
+  final String? academyAddress;
 
   const ReceiptDialog({
     super.key,
@@ -21,6 +28,10 @@ class ReceiptDialog extends StatelessWidget {
     required this.guardianPhone,
     required this.voucherNumber,
     this.academyName = 'ClassKhata Academy',
+    this.rollNumber,
+    this.batchName,
+    this.academyPhone,
+    this.academyAddress,
   });
 
   Future<void> _shareOnWhatsApp(BuildContext context) async {
@@ -154,12 +165,25 @@ class ReceiptDialog extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.print, size: 16),
-                        label: const Text('Print Receipt'),
+                        label: const Text('Print Preview'),
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Receipt sent to printer.')),
+                          PdfPrintPreviewDialog.show(
+                            context,
+                            title: 'Fee Receipt Preview (${receipt.receiptNumber})',
+                            initialFormat: PdfPageFormat.roll80,
+                            pdfFileName: '${receipt.receiptNumber}.pdf',
+                            buildPdf: (format) => PdfDocumentService.generateFeeReceiptPdf(
+                              receipt: receipt,
+                              studentName: studentName,
+                              voucherNumber: voucherNumber,
+                              rollNumber: rollNumber,
+                              batchName: batchName,
+                              academyName: academyName,
+                              academyPhone: academyPhone,
+                              academyAddress: academyAddress,
+                              format: format,
+                            ),
                           );
-                          Navigator.of(context).pop();
                         },
                       ),
                     ),

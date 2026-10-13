@@ -24,6 +24,11 @@ final dashboardKpisUseCaseProvider = Provider<GetDashboardKpisUseCase>((ref) {
 final dashboardKpisProvider = FutureProvider<DashboardKpis>((ref) async {
   final month = ref.watch(selectedDashboardMonthProvider);
   final useCase = ref.watch(dashboardKpisUseCaseProvider);
+
+  // Automatically recompute KPIs when students or academic entities change
+  ref.watch(studentListVersionProvider);
+  ref.watch(academicDataProvider);
+
   final result = await useCase(month);
   return result.fold(
     onSuccess: (kpis) => kpis,

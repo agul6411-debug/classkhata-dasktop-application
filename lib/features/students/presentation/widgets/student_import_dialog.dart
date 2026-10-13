@@ -8,6 +8,7 @@ import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../academics/presentation/providers/academic_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../../domain/entities/student_entities.dart';
 import '../providers/student_providers.dart';
 
@@ -93,7 +94,9 @@ class _StudentImportDialogState extends ConsumerState<StudentImportDialog> {
 
     result.fold(
       onSuccess: (count) {
+        ref.read(studentListVersionProvider.notifier).state++;
         ref.invalidate(studentsListProvider);
+        ref.invalidate(dashboardKpisProvider);
         setState(() {
           _isLoading = false;
           _importedCount = count;
@@ -167,14 +170,16 @@ class _StudentImportDialogState extends ConsumerState<StudentImportDialog> {
                 academicDataAsync.when(
                   data: (data) => DropdownButtonFormField<int>(
                     value: _selectedBatchId,
-                    decoration: const InputDecoration(labelText: 'Target Batch *'),
-                    items: data.batches
-                        .map((b) => DropdownMenuItem(value: b.id, child: Text(b.name)))
-                        .toList(),
+                    decoration: const InputDecoration(labelText: 'Target Class & Section *'),
+                    items: data.batches.map((b) {
+                      final course = data.courses.where((c) => c.id == b.courseId).firstOrNull;
+                      final label = course != null ? '${course.name} - ${b.name}' : b.name;
+                      return DropdownMenuItem(value: b.id, child: Text(label));
+                    }).toList(),
                     onChanged: (val) => setState(() => _selectedBatchId = val),
                   ),
                   loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const Text('Failed to load batches'),
+                  error: (_, __) => const Text('Failed to load academic options'),
                 ),
                 const SizedBox(height: 12),
                 const Text(

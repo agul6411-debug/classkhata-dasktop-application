@@ -4,11 +4,13 @@ library;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/security/permission_service.dart';
 import '../../../../shared/widgets/error_banner.dart';
+import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../domain/entities/report_entities.dart';
@@ -50,9 +52,12 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
 
     await res.fold(
       onSuccess: (bytes) async {
-        await Printing.layoutPdf(
-          onLayout: (_) async => Uint8List.fromList(bytes),
-          name: '${data.type.name}_${isThermal ? 'thermal' : 'a4'}',
+        PdfPrintPreviewDialog.show(
+          context,
+          title: '${data.title} (${isThermal ? "Thermal Roll" : "A4"} Preview)',
+          initialFormat: isThermal ? PdfPageFormat.roll80 : PdfPageFormat.a4.landscape,
+          pdfFileName: '${data.type.name}_${isThermal ? 'thermal' : 'a4'}.pdf',
+          buildPdf: (_) async => Uint8List.fromList(bytes),
         );
       },
       onFailure: (f) async {

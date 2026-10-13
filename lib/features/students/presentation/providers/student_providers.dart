@@ -76,6 +76,9 @@ final studentFilterProvider =
   return StudentFilterNotifier();
 });
 
+/// Mutation counter to notify dependent providers when students change.
+final studentListVersionProvider = StateProvider<int>((ref) => 0);
+
 /// Future provider querying students according to active filters.
 final studentsListProvider = FutureProvider<List<Student>>((ref) async {
   final filter = ref.watch(studentFilterProvider);

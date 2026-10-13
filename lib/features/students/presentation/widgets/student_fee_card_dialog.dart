@@ -2,8 +2,11 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/money/money.dart';
+import '../../../../core/printing/pdf_document_service.dart';
+import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
 import '../../domain/entities/student_entities.dart';
 
 class StudentFeeCardDialog extends StatelessWidget {
@@ -11,6 +14,7 @@ class StudentFeeCardDialog extends StatelessWidget {
   final String batchName;
   final Money monthlyFee;
   final int dueDay;
+  final String academyName;
 
   const StudentFeeCardDialog({
     super.key,
@@ -18,6 +22,7 @@ class StudentFeeCardDialog extends StatelessWidget {
     required this.batchName,
     required this.monthlyFee,
     required this.dueDay,
+    this.academyName = 'ClassKhata Academy',
   });
 
   @override
@@ -157,12 +162,21 @@ class StudentFeeCardDialog extends StatelessWidget {
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
                       icon: const Icon(Icons.print, size: 16),
-                      label: const Text('Print Fee Card'),
+                      label: const Text('Print Preview'),
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Fee Card sent to printer.')),
+                        PdfPrintPreviewDialog.show(
+                          context,
+                          title: 'Fee Ledger Card - ${student.name}',
+                          initialFormat: PdfPageFormat.a4,
+                          pdfFileName: 'fee_card_${student.rollNumber}.pdf',
+                          buildPdf: (format) => PdfDocumentService.generateStudentFeeCardPdf(
+                            student: student,
+                            batchName: batchName,
+                            academyName: academyName,
+                            history: const [],
+                            format: format,
+                          ),
                         );
-                        Navigator.of(context).pop();
                       },
                     ),
                   ],

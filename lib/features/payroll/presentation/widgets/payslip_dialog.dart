@@ -3,12 +3,16 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf/pdf.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/money/money.dart';
+import '../../../../core/printing/pdf_document_service.dart';
 import '../../../../core/security/permission_service.dart';
 import '../../../../shared/widgets/error_banner.dart';
+import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../domain/entities/payroll_entities.dart';
 import '../providers/payroll_providers.dart';
 
@@ -232,12 +236,22 @@ class _PayslipDialogState extends ConsumerState<PayslipDialog> {
                     Expanded(
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.print, size: 16),
-                        label: const Text('Print Payslip'),
+                        label: const Text('Print Preview'),
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Payslip sent to printer.')),
+                          final academy = ref.read(academyProfileProvider).valueOrNull;
+                          PdfPrintPreviewDialog.show(
+                            context,
+                            title: 'Salary Payslip - ${run.staffName} (${run.monthYear})',
+                            initialFormat: PdfPageFormat.a4,
+                            pdfFileName: 'payslip_${run.staffName.replaceAll(' ', '_')}_${run.monthYear}.pdf',
+                            buildPdf: (format) => PdfDocumentService.generatePayslipPdf(
+                              run: run,
+                              academyName: academy?.name ?? widget.academyName,
+                              academyPhone: academy?.phone,
+                              academyAddress: academy?.address,
+                              format: format,
+                            ),
                           );
-                          Navigator.of(context).pop();
                         },
                       ),
                     ),

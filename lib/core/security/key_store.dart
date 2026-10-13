@@ -18,7 +18,9 @@ class KeyStore {
   KeyStore._();
   static final KeyStore instance = KeyStore._();
 
-  final _storage = const FlutterSecureStorage();
+  final _storage = const FlutterSecureStorage(
+    mOptions: MacOsOptions(useDataProtectionKeyChain: false),
+  );
 
   /// Returns the database encryption key, generating one if it doesn't exist.
   Future<Result<String>> getOrCreateDbKey() async {

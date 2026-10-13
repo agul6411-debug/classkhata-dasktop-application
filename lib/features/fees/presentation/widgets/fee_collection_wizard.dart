@@ -13,6 +13,7 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../../students/domain/entities/student_entities.dart';
 import '../../../students/presentation/providers/student_providers.dart';
 import '../../domain/entities/fee_entities.dart';
@@ -83,6 +84,8 @@ class _FeeCollectionWizardState extends ConsumerState<FeeCollectionWizard> {
         ref.invalidate(defaulterAgingProvider);
         Navigator.of(context).pop();
 
+        final academy = ref.read(academyProfileProvider).valueOrNull;
+
         // Show official receipt dialog
         showDialog(
           context: context,
@@ -91,6 +94,10 @@ class _FeeCollectionWizardState extends ConsumerState<FeeCollectionWizard> {
             studentName: _selectedStudent!.name,
             guardianPhone: _selectedStudent!.guardianPhone,
             voucherNumber: _selectedVoucher!.voucherNumber,
+            rollNumber: _selectedStudent!.rollNumber,
+            academyName: academy?.name ?? 'ClassKhata Academy',
+            academyPhone: academy?.phone,
+            academyAddress: academy?.address,
           ),
         );
       },

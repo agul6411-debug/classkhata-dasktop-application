@@ -3,10 +3,16 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf/pdf.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../../../core/printing/pdf_document_service.dart';
+import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../academics/presentation/providers/academic_providers.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
+import '../../../students/domain/entities/student_entities.dart';
+import '../../../students/presentation/providers/student_providers.dart';
 import '../../domain/entities/fee_entities.dart';
 import '../providers/fee_providers.dart';
 import '../widgets/fee_collection_wizard.dart';
@@ -127,6 +133,74 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
   // Tab 1: Vouchers & Ledger
   // ---------------------------------------------------------------------------
 
+  Future<void> _previewVoucher(FeeVoucher voucher) async {
+    final academy = ref.read(academyProfileProvider).valueOrNull;
+    final academicData = ref.read(academicDataProvider).valueOrNull;
+    final batch = academicData?.batches.where((b) => b.id == voucher.batchId).firstOrNull;
+    final batchName = batch?.name ?? 'Class / Batch';
+
+    // Fetch student info
+    final studentRepo = ref.read(studentRepositoryProvider);
+    final studentRes = await studentRepo.getStudentById(voucher.studentId);
+    final student = studentRes.fold(onSuccess: (s) => s, onFailure: (_) => null);
+    final studentName = student?.name ?? 'Student #${voucher.studentId}';
+    final rollNumber = student?.rollNumber;
+
+    if (!mounted) return;
+
+    PdfPrintPreviewDialog.show(
+      context,
+      title: 'Fee Voucher Preview (${voucher.voucherNumber})',
+      initialFormat: PdfPageFormat.a4,
+      pdfFileName: '${voucher.voucherNumber}.pdf',
+      buildPdf: (format) => PdfDocumentService.generateFeeVoucherPdf(
+        voucher: voucher,
+        studentName: studentName,
+        rollNumber: rollNumber,
+        batchName: batchName,
+        academyName: academy?.name ?? 'ClassKhata Academy',
+        academyPhone: academy?.phone,
+        academyAddress: academy?.address,
+        format: format,
+      ),
+    );
+  }
+
+  Future<void> _previewAllVouchers(List<FeeVoucher> vouchers) async {
+    if (vouchers.isEmpty) return;
+    final academy = ref.read(academyProfileProvider).valueOrNull;
+    final academicData = ref.read(academicDataProvider).valueOrNull;
+    final filterState = ref.read(voucherFilterProvider);
+    final batch = filterState.batchId != null
+        ? academicData?.batches.where((b) => b.id == filterState.batchId).firstOrNull
+        : null;
+    final batchName = batch?.name ?? 'School Classes';
+
+    // Fetch student mappings
+    final studentsRes = await ref.read(studentRepositoryProvider).getStudents();
+    final students = studentsRes.fold(onSuccess: (s) => s, onFailure: (_) => <Student>[]);
+    final studentNamesMap = {for (var s in students) s.id: s.name};
+    final studentRollsMap = {for (var s in students) s.id: s.rollNumber};
+
+    if (!mounted) return;
+
+    PdfPrintPreviewDialog.show(
+      context,
+      title: 'Batch Vouchers Preview (${vouchers.length} vouchers)',
+      initialFormat: PdfPageFormat.a4,
+      pdfFileName: 'batch_vouchers_${filterState.monthYear ?? "all"}.pdf',
+      buildPdf: (format) => PdfDocumentService.generateBatchVouchersPdf(
+        vouchers: vouchers,
+        studentNames: studentNamesMap,
+        studentRolls: studentRollsMap,
+        batchName: batchName,
+        academyName: academy?.name ?? 'ClassKhata Academy',
+        academyPhone: academy?.phone,
+        academyAddress: academy?.address,
+      ),
+    );
+  }
+
   Widget _buildVouchersTab() {
     final vouchersAsync = ref.watch(vouchersListProvider);
     final academicDataAsync = ref.watch(academicDataProvider);
@@ -171,6 +245,14 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
                     onChanged: (val) => ref.read(voucherFilterProvider.notifier).setStatus(val),
                   ),
                 ),
+                if (vouchersAsync.valueOrNull?.isNotEmpty == true) ...[
+                  const SizedBox(width: 16),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.print_outlined, size: 16),
+                    label: Text('Preview All (${vouchersAsync.value!.length})'),
+                    onPressed: () => _previewAllVouchers(vouchersAsync.value!),
+                  ),
+                ],
               ],
             ),
           ),
@@ -197,6 +279,7 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
                       DataColumn(label: Text('Total Due')),
                       DataColumn(label: Text('Paid')),
                       DataColumn(label: Text('Status')),
+                      DataColumn(label: Text('Action')),
                     ],
                     rows: vouchers.map((v) {
                       return DataRow(
@@ -217,6 +300,13 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
                                 _ => StatusBadgeType.pending,
                               },
                               label: v.status.name.toUpperCase(),
+                            ),
+                          ),
+                          DataCell(
+                            IconButton(
+                              icon: const Icon(Icons.print_outlined, size: 18, color: AppColors.accent),
+                              tooltip: 'Preview & Print 3-Copy Voucher',
+                              onPressed: () => _previewVoucher(v),
                             ),
                           ),
                         ],

@@ -24,12 +24,12 @@ class GetDashboardKpisUseCase {
         _academicRepo = academicRepo;
 
   Future<Result<DashboardKpis>> call(String monthYear) async {
-    // 1. Fetch vouchers for the selected month
+    // 1. Fetch vouchers for the selected month (gracefully defaults to empty list if none exist or error)
     final vouchersRes = await _feeRepo.getVouchers(monthYear: monthYear);
-    if (vouchersRes.isFailure) {
-      return Failure(vouchersRes.fold(onSuccess: (_) => const UnexpectedFailure(''), onFailure: (f) => f));
-    }
-    final vouchers = vouchersRes.valueOrThrow;
+    final vouchers = vouchersRes.fold(
+      onSuccess: (list) => list,
+      onFailure: (_) => <FeeVoucher>[],
+    );
 
     // 2. Fetch counts
     final studentsRes = await _studentRepo.getStudents(status: StudentStatus.active);

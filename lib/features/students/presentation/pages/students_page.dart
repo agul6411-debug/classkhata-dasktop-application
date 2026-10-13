@@ -11,6 +11,7 @@ import '../../../../shared/widgets/status_badge.dart';
 import '../../../academics/domain/entities/academic_entities.dart';
 import '../../../academics/presentation/providers/academic_providers.dart';
 import '../../../academics/presentation/widgets/academic_dialogs.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../../domain/entities/student_entities.dart';
 import '../providers/student_providers.dart';
 import '../widgets/student_fee_card_dialog.dart';
@@ -32,6 +33,9 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
   // Selection for bulk promotion
   final Set<int> _selectedStudentIds = {};
   int? _promotionTargetBatchId;
+
+  // Selected class filter for Classes & Sections tab
+  int? _selectedClassId;
 
   @override
   void initState() {
@@ -72,7 +76,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Manage registrations, batches, courses, and family links.',
+                      'Manage student registrations, classes, sections, and academic sessions.',
                       style: TextStyle(color: AppColors.textMuted, fontSize: 13),
                     ),
                   ],
@@ -117,7 +121,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                 indicatorWeight: 3,
                 tabs: const [
                   Tab(text: 'All Students'),
-                  Tab(text: 'Batches & Courses'),
+                  Tab(text: 'Classes & Sections'),
                   Tab(text: 'Promotions & Families'),
                 ],
               ),
@@ -130,7 +134,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                 controller: _tabController,
                 children: [
                   _buildStudentsTab(),
-                  _buildBatchesTab(),
+                  _buildClassesAndSectionsTab(),
                   _buildPromotionsTab(),
                 ],
               ),
@@ -173,10 +177,13 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                   child: academicDataAsync.when(
                     data: (data) => DropdownButtonFormField<int?>(
                       value: filterState.batchId,
-                      decoration: const InputDecoration(labelText: 'Filter by Batch'),
+                      decoration: const InputDecoration(labelText: 'Filter by Section'),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('All Batches')),
-                        ...data.batches.map((b) => DropdownMenuItem(value: b.id, child: Text(b.name))),
+                        const DropdownMenuItem(value: null, child: Text('All Sections')),
+                        ...data.batches.map((b) => DropdownMenuItem(
+                              value: b.id,
+                              child: Text(data.getFullSectionName(b.id)),
+                            )),
                       ],
                       onChanged: (val) => ref.read(studentFilterProvider.notifier).setBatchId(val),
                     ),
@@ -215,10 +222,10 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                   );
                 }
 
-                final batchesMap = academicDataAsync.maybeWhen(
-                  data: (data) => {for (var b in data.batches) b.id: b},
-                  orElse: () => <int, Batch>{},
-                );
+                final acadData = academicDataAsync.asData?.value;
+                final batchesMap = acadData != null
+                    ? {for (var b in acadData.batches) b.id: b}
+                    : <int, Batch>{};
 
                 return SingleChildScrollView(
                   child: DataTable(
@@ -226,18 +233,20 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                       DataColumn(label: Text('Roll No')),
                       DataColumn(label: Text('Name')),
                       DataColumn(label: Text('Guardian Phone')),
-                      DataColumn(label: Text('Batch')),
+                      DataColumn(label: Text('Class & Section')),
                       DataColumn(label: Text('Status')),
                       DataColumn(label: Text('Actions')),
                     ],
                     rows: students.map((student) {
                       final batch = batchesMap[student.batchId];
+                      final sectionDisplay = acadData?.getFullSectionName(student.batchId) ??
+                          (batch?.name ?? 'Section #${student.batchId}');
                       return DataRow(
                         cells: [
                           DataCell(Text(student.rollNumber, style: const TextStyle(fontWeight: FontWeight.bold))),
                           DataCell(Text(student.name)),
                           DataCell(Text(student.guardianPhone)),
-                          DataCell(Text(batch?.name ?? 'Batch #${student.batchId}')),
+                          DataCell(Text(sectionDisplay)),
                           DataCell(
                             StatusBadge(
                               type: student.status == StudentStatus.active
@@ -257,7 +266,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                                     context: context,
                                     builder: (_) => StudentIdCardDialog(
                                       student: student,
-                                      batchName: batch?.name ?? 'General',
+                                      batchName: sectionDisplay,
                                     ),
                                   ),
                                 ),
@@ -268,7 +277,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                                     context: context,
                                     builder: (_) => StudentFeeCardDialog(
                                       student: student,
-                                      batchName: batch?.name ?? 'General',
+                                      batchName: sectionDisplay,
                                       monthlyFee: batch?.monthlyFee ?? const Money(0),
                                       dueDay: batch?.dueDay ?? 10,
                                     ),
@@ -296,139 +305,403 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
   // Tab 2: Batches & Courses Directory
   // ---------------------------------------------------------------------------
 
-  Widget _buildBatchesTab() {
+  // ---------------------------------------------------------------------------
+  // Tab 2: Classes & Sections Directory (School Hierarchy)
+  // ---------------------------------------------------------------------------
+
+  Widget _buildClassesAndSectionsTab() {
     final academicDataAsync = ref.watch(academicDataProvider);
 
     return academicDataAsync.when(
-      data: (data) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left: Courses & Sessions
-          Expanded(
-            flex: 2,
-            child: Card(
+      data: (data) {
+        final activeSession = data.currentSession;
+        final selectedClass = _selectedClassId == null
+            ? null
+            : data.courses.where((c) => c.id == _selectedClassId).firstOrNull;
+        final displayedSections = _selectedClassId == null
+            ? data.batches
+            : data.getSectionsForClass(_selectedClassId!);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Top: Active Academic Session Banner
+            Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Courses & Classes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        Row(
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.school, color: AppColors.accent, size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Academic Session: ${activeSession?.name ?? "No Active Session"}',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.heading),
+                              ),
+                              if (activeSession != null) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.paidBg,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text('ACTIVE', style: TextStyle(color: AppColors.paid, fontSize: 10, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            activeSession != null
+                                ? 'Session Period: ${activeSession.startDate.day}/${activeSession.startDate.month}/${activeSession.startDate.year} - ${activeSession.endDate.day}/${activeSession.endDate.month}/${activeSession.endDate.year} • All student enrollments and fee schedules are bound to this session.'
+                                : 'Please create or switch an active session to organize academic classes and sections.',
+                            style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.history_edu, size: 15),
+                      label: const Text('Manage Sessions'),
+                      onPressed: () => showDialog(
+                        context: context,
+                        builder: (_) => const ManageSessionsDialog(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    PrimaryButton(
+                      label: 'New Session',
+                      icon: Icons.add,
+                      onPressed: () => showDialog(
+                        context: context,
+                        builder: (_) => const CreateSessionDialog(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Split View: Classes on Left, Sections on Right
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left: School Classes / Grades
+                  Expanded(
+                    flex: 2,
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            TextButton.icon(
-                              icon: const Icon(Icons.calendar_today, size: 14),
-                              label: const Text('Add Session'),
-                              onPressed: () => showDialog(
-                                context: context,
-                                builder: (_) => const CreateSessionDialog(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('School Classes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                PrimaryButton(
+                                  label: 'Add Class',
+                                  icon: Icons.add,
+                                  onPressed: () => showDialog(
+                                    context: context,
+                                    builder: (_) => const CreateClassDialog(),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Divider(),
+                            // All Classes option
+                            InkWell(
+                              onTap: () => setState(() => _selectedClassId = null),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: _selectedClassId == null ? AppColors.accent.withOpacity(0.12) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: _selectedClassId == null ? AppColors.accent : Colors.transparent,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(Icons.layers, size: 16, color: _selectedClassId == null ? AppColors.accent : AppColors.textMuted),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'All Classes',
+                                          style: TextStyle(
+                                            fontWeight: _selectedClassId == null ? FontWeight.bold : FontWeight.w500,
+                                            color: _selectedClassId == null ? AppColors.accent : AppColors.heading,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      '${data.courses.length} total',
+                                      style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            PrimaryButton(
-                              label: 'Add Course',
-                              icon: Icons.add,
-                              onPressed: () => showDialog(
-                                context: context,
-                                builder: (_) => const CreateCourseDialog(),
-                              ),
+                            const SizedBox(height: 6),
+                            Expanded(
+                              child: data.courses.isEmpty
+                                  ? const Center(
+                                      child: Text(
+                                        'No classes created yet.\nClick "Add Class" to start.',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(color: AppColors.textMuted),
+                                      ),
+                                    )
+                                  : ListView.separated(
+                                      itemCount: data.courses.length,
+                                      separatorBuilder: (_, __) => const SizedBox(height: 4),
+                                      itemBuilder: (context, idx) {
+                                        final c = data.courses[idx];
+                                        final isSelected = _selectedClassId == c.id;
+                                        final secCount = data.getSectionsForClass(c.id).length;
+                                        return InkWell(
+                                          onTap: () => setState(() {
+                                            _selectedClassId = isSelected ? null : c.id;
+                                          }),
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                            decoration: BoxDecoration(
+                                              color: isSelected ? AppColors.accent.withOpacity(0.12) : AppColors.inputFill,
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(
+                                                color: isSelected ? AppColors.accent : Colors.transparent,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                CircleAvatar(
+                                                  radius: 12,
+                                                  backgroundColor: isSelected ? AppColors.accent : AppColors.border,
+                                                  child: Text(
+                                                    c.code ?? (c.name.isNotEmpty ? c.name[0] : 'C'),
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isSelected ? Colors.white : AppColors.heading,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        c.name,
+                                                        style: TextStyle(
+                                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                                          color: AppColors.heading,
+                                                          fontSize: 13,
+                                                        ),
+                                                      ),
+                                                      if (c.code != null)
+                                                        Text('Code: ${c.code}', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                                                    ],
+                                                  ),
+                                                ),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.surface,
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    border: Border.all(color: AppColors.border),
+                                                  ),
+                                                  child: Text(
+                                                    '$secCount sec',
+                                                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                    const Divider(),
-                    Expanded(
-                      child: data.courses.isEmpty
-                          ? const Center(child: Text('No courses added yet.'))
-                          : ListView.separated(
-                              itemCount: data.courses.length,
-                              separatorBuilder: (_, __) => const Divider(height: 1),
-                              itemBuilder: (context, idx) {
-                                final c = data.courses[idx];
-                                return ListTile(
-                                  title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                  subtitle: Text(c.code ?? 'Code: N/A'),
-                                  trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
+                  ),
+                  const SizedBox(width: 16),
 
-          // Right: Batches
-          Expanded(
-            flex: 3,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Active Batches', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        PrimaryButton(
-                          label: 'Add Batch',
-                          icon: Icons.add,
-                          onPressed: () => showDialog(
-                            context: context,
-                            builder: (_) => const CreateBatchDialog(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Divider(),
-                    Expanded(
-                      child: data.batches.isEmpty
-                          ? const Center(child: Text('No batches created yet.'))
-                          : ListView.builder(
-                              itemCount: data.batches.length,
-                              itemBuilder: (context, idx) {
-                                final b = data.batches[idx];
-                                return Card(
-                                  color: AppColors.inputFill,
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
-                                  child: ListTile(
-                                    title: Text(b.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    subtitle: Text(
-                                      'Instructor: ${b.instructorName ?? "N/A"} • Timing: ${b.timing ?? "N/A"}',
-                                    ),
-                                    trailing: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                          b.monthlyFee.format(),
-                                          style: const TextStyle(
-                                            color: AppColors.accent,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        Text('Due: Day ${b.dueDay}', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                                      ],
-                                    ),
+                  // Right: Class Sections
+                  Expanded(
+                    flex: 3,
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  selectedClass != null
+                                      ? '${selectedClass.name} Sections (${displayedSections.length})'
+                                      : 'All Class Sections (${displayedSections.length})',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                                PrimaryButton(
+                                  label: 'Add Section',
+                                  icon: Icons.add,
+                                  onPressed: () => showDialog(
+                                    context: context,
+                                    builder: (_) => CreateSectionDialog(initialCourseId: _selectedClassId),
                                   ),
-                                );
-                              },
+                                ),
+                              ],
                             ),
+                            const Divider(),
+                            Expanded(
+                              child: displayedSections.isEmpty
+                                  ? Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.meeting_room_outlined, size: 40, color: AppColors.textMuted),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            selectedClass != null
+                                                ? 'No sections created for ${selectedClass.name} yet.'
+                                                : 'No class sections created yet.',
+                                            style: const TextStyle(color: AppColors.textMuted),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          TextButton.icon(
+                                            icon: const Icon(Icons.add, size: 16),
+                                            label: const Text('Add Section Now'),
+                                            onPressed: () => showDialog(
+                                              context: context,
+                                              builder: (_) => CreateSectionDialog(initialCourseId: _selectedClassId),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : ListView.builder(
+                                      itemCount: displayedSections.length,
+                                      itemBuilder: (context, idx) {
+                                        final b = displayedSections[idx];
+                                        return Card(
+                                          color: AppColors.inputFill,
+                                          margin: const EdgeInsets.symmetric(vertical: 4),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  width: 38,
+                                                  height: 38,
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.accent.withOpacity(0.1),
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: const Icon(Icons.meeting_room, color: AppColors.accent, size: 20),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        data.getFullSectionName(b.id),
+                                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.heading),
+                                                      ),
+                                                      const SizedBox(height: 3),
+                                                      Row(
+                                                        children: [
+                                                          const Icon(Icons.person, size: 13, color: AppColors.textMuted),
+                                                          const SizedBox(width: 3),
+                                                          Text(
+                                                            'Teacher: ${b.classTeacher ?? "Not Assigned"}',
+                                                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                                          ),
+                                                          const SizedBox(width: 10),
+                                                          const Icon(Icons.room, size: 13, color: AppColors.textMuted),
+                                                          const SizedBox(width: 3),
+                                                          Text(
+                                                            'Room: ${b.roomOrTiming ?? "N/A"}',
+                                                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                                  children: [
+                                                    Text(
+                                                      b.monthlyFee.format(),
+                                                      style: const TextStyle(
+                                                        color: AppColors.accent,
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                    Text('Due: Day ${b.dueDay}', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                                                    const SizedBox(height: 4),
+                                                    OutlinedButton.icon(
+                                                      style: OutlinedButton.styleFrom(
+                                                        visualDensity: VisualDensity.compact,
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                      ),
+                                                      icon: const Icon(Icons.person_add, size: 13),
+                                                      label: const Text('Enroll', style: TextStyle(fontSize: 11)),
+                                                      onPressed: () => showDialog(
+                                                        context: context,
+                                                        builder: (_) => StudentFormDialog(initialBatchId: b.id),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error loading academics: $e')),
     );
@@ -468,9 +741,9 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             value: _promotionTargetBatchId,
-                            decoration: const InputDecoration(labelText: 'Target Next Batch *'),
+                            decoration: const InputDecoration(labelText: 'Target Next Class & Section *'),
                             items: data.batches
-                                .map((b) => DropdownMenuItem(value: b.id, child: Text(b.name)))
+                                .map((b) => DropdownMenuItem(value: b.id, child: Text(data.getFullSectionName(b.id))))
                                 .toList(),
                             onChanged: (val) => setState(() => _promotionTargetBatchId = val),
                           ),
@@ -494,7 +767,9 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                                         SnackBar(content: Text('Successfully promoted $count student(s)!')),
                                       );
                                       setState(() => _selectedStudentIds.clear());
+                                      ref.read(studentListVersionProvider.notifier).state++;
                                       ref.invalidate(studentsListProvider);
+                                      ref.invalidate(dashboardKpisProvider);
                                     },
                                     onFailure: (f) => ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text(f.message)),
@@ -510,27 +785,31 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                   const SizedBox(height: 12),
                   Expanded(
                     child: studentsAsync.when(
-                      data: (students) => ListView.builder(
-                        itemCount: students.length,
-                        itemBuilder: (context, idx) {
-                          final s = students[idx];
-                          final isSelected = _selectedStudentIds.contains(s.id);
-                          return CheckboxListTile(
-                            value: isSelected,
-                            title: Text('${s.rollNumber} - ${s.name}'),
-                            subtitle: Text('Guardian: ${s.guardianPhone}'),
-                            onChanged: (checked) {
-                              setState(() {
-                                if (checked == true) {
-                                  _selectedStudentIds.add(s.id);
-                                } else {
-                                  _selectedStudentIds.remove(s.id);
-                                }
-                              });
-                            },
-                          );
-                        },
-                      ),
+                      data: (students) {
+                        final acadData = academicDataAsync.asData?.value;
+                        return ListView.builder(
+                          itemCount: students.length,
+                          itemBuilder: (context, idx) {
+                            final s = students[idx];
+                            final isSelected = _selectedStudentIds.contains(s.id);
+                            final sectionName = acadData?.getFullSectionName(s.batchId) ?? 'Section #${s.batchId}';
+                            return CheckboxListTile(
+                              value: isSelected,
+                              title: Text('${s.rollNumber} - ${s.name}'),
+                              subtitle: Text('Current: $sectionName • Guardian: ${s.guardianPhone}'),
+                              onChanged: (checked) {
+                                setState(() {
+                                  if (checked == true) {
+                                    _selectedStudentIds.add(s.id);
+                                  } else {
+                                    _selectedStudentIds.remove(s.id);
+                                  }
+                                });
+                              },
+                            );
+                          },
+                        );
+                      },
                       loading: () => const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Center(child: Text('Error: $e')),
                     ),

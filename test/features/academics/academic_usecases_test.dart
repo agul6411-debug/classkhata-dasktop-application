@@ -170,5 +170,88 @@ void main() {
       expect(res.isFailure, true);
       expect(res.fold(onSuccess: (_) => null, onFailure: (f) => f), isA<ValidationFailure>());
     });
+
+    test('SetCurrentSessionUseCase calls repository successfully', () async {
+      final setUseCase = SetCurrentSessionUseCase(repo);
+      final res = await setUseCase(2);
+      expect(res.isSuccess, true);
+    });
+
+    test('AcademicDataRecordExt correctly extracts current session, class sections, and full section names', () {
+      final s1 = AcademicSession(
+        id: 1,
+        name: '2025-2026',
+        startDate: DateTime(2025, 4, 1),
+        endDate: DateTime(2026, 3, 31),
+        isCurrent: false,
+      );
+      final s2 = AcademicSession(
+        id: 2,
+        name: '2026-2027',
+        startDate: DateTime(2026, 4, 1),
+        endDate: DateTime(2027, 3, 31),
+        isCurrent: true,
+      );
+      final c1 = Course(id: 10, name: 'Class 9', code: 'CL-09');
+      final c2 = Course(id: 11, name: 'Class 10', code: 'CL-10');
+      final b1 = Batch(
+        id: 100,
+        sessionId: 2,
+        courseId: 10,
+        name: 'Section A',
+        monthlyFee: const Money(350000),
+        dueDay: 10,
+        isActive: true,
+        instructorName: 'Mr. Ahmed',
+        timing: 'Room 12',
+      );
+      final b2 = Batch(
+        id: 101,
+        sessionId: 2,
+        courseId: 10,
+        name: 'Section B',
+        monthlyFee: const Money(350000),
+        dueDay: 10,
+        isActive: true,
+      );
+      final b3 = Batch(
+        id: 102,
+        sessionId: 2,
+        courseId: 11,
+        name: 'Section A',
+        monthlyFee: const Money(400000),
+        dueDay: 10,
+        isActive: true,
+      );
+
+      final record = (
+        sessions: [s1, s2],
+        courses: [c1, c2],
+        batches: [b1, b2, b3],
+      );
+
+      // Current session extraction
+      expect(record.currentSession?.id, 2);
+      expect(record.currentSession?.name, '2026-2027');
+
+      // Filter sections for class
+      final class9Sections = record.getSectionsForClass(10);
+      expect(class9Sections.length, 2);
+      expect(class9Sections.map((b) => b.name).toList(), ['Section A', 'Section B']);
+
+      final class10Sections = record.getSectionsForClass(11);
+      expect(class10Sections.length, 1);
+      expect(class10Sections.first.name, 'Section A');
+
+      // Full section name format
+      expect(record.getFullSectionName(100), 'Class 9 - Section A');
+      expect(record.getFullSectionName(102), 'Class 10 - Section A');
+      expect(record.getFullSectionName(999), 'Section #999');
+
+      // School aliases
+      expect(b1.sectionName, 'Section A');
+      expect(b1.classTeacher, 'Mr. Ahmed');
+      expect(b1.roomOrTiming, 'Room 12');
+    });
   });
 }

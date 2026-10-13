@@ -1,4 +1,4 @@
-/// Dialog for student registration.
+/// Dialog for student registration with authentic school hierarchy (Class -> Section).
 library;
 
 import 'package:flutter/material.dart';
@@ -7,12 +7,16 @@ import '../../../../app/theme/app_theme.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../../academics/domain/entities/academic_entities.dart';
 import '../../../academics/presentation/providers/academic_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../providers/student_providers.dart';
 
 class StudentFormDialog extends ConsumerStatefulWidget {
-  const StudentFormDialog({super.key});
+  final int? initialBatchId;
+
+  const StudentFormDialog({super.key, this.initialBatchId});
 
   @override
   ConsumerState<StudentFormDialog> createState() => _StudentFormDialogState();
@@ -26,10 +30,12 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
   final _emailCtrl = TextEditingController();
   final _rollNumberCtrl = TextEditingController();
 
+  int? _selectedClassId;
   int? _selectedBatchId;
   int? _selectedFamilyId;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _initialized = false;
 
   @override
   void dispose() {
@@ -44,7 +50,7 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_selectedBatchId == null) {
-      setState(() => _errorMessage = 'Please select a batch.');
+      setState(() => _errorMessage = 'Please select a Class and Section for enrollment.');
       return;
     }
 
@@ -60,8 +66,8 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
       name: _nameCtrl.text.trim(),
       batchId: _selectedBatchId!,
       guardianPhone: _guardianPhoneCtrl.text.trim(),
-      phone: _phoneCtrl.text.trim(),
-      email: _emailCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+      email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
       familyId: _selectedFamilyId,
       customRollNumber: _rollNumberCtrl.text.trim().isEmpty ? null : _rollNumberCtrl.text.trim(),
       createdBy: currentUser?.id ?? 1,
@@ -71,7 +77,9 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
 
     result.fold(
       onSuccess: (student) {
+        ref.read(studentListVersionProvider.notifier).state++;
         ref.invalidate(studentsListProvider);
+        ref.invalidate(dashboardKpisProvider);
         Navigator.of(context).pop(student);
       },
       onFailure: (f) {
@@ -88,11 +96,25 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
     final academicDataAsync = ref.watch(academicDataProvider);
     final familiesAsync = ref.watch(familiesListProvider);
 
+    // Pre-select initial batch and its class if requested
+    academicDataAsync.whenData((data) {
+      if (!_initialized) {
+        _initialized = true;
+        if (widget.initialBatchId != null) {
+          _selectedBatchId = widget.initialBatchId;
+          final batch = data.batches.where((b) => b.id == widget.initialBatchId).firstOrNull;
+          if (batch != null) {
+            _selectedClassId = batch.courseId;
+          }
+        }
+      }
+    });
+
     return Dialog(
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 550),
+        constraints: const BoxConstraints(maxWidth: 580),
         child: Padding(
           padding: const EdgeInsets.all(28),
           child: Form(
@@ -129,7 +151,7 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                     Expanded(
                       child: AppTextField(
                         controller: _nameCtrl,
-                        label: 'Student Name *',
+                        label: 'Student Full Name *',
                         autofocus: true,
                         validator: (v) =>
                             (v == null || v.trim().isEmpty) ? 'Name is required' : null,
@@ -139,7 +161,7 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                     Expanded(
                       child: AppTextField(
                         controller: _guardianPhoneCtrl,
-                        label: 'Guardian Phone *',
+                        label: 'Guardian Phone (WhatsApp) *',
                         keyboardType: TextInputType.phone,
                         validator: (v) => (v == null || v.trim().isEmpty)
                             ? 'Guardian phone is required'
@@ -169,29 +191,72 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                   ],
                 ),
                 const SizedBox(height: 12),
+
+                // School Class & Section Hierarchy Dropdowns
+                academicDataAsync.when(
+                  data: (data) {
+                    final availableClasses = data.courses;
+                    final availableSections = _selectedClassId != null
+                        ? data.getSectionsForClass(_selectedClassId!)
+                        : <Batch>[];
+
+                    return Row(
+                      children: [
+                        // Class dropdown
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            value: _selectedClassId,
+                            decoration: const InputDecoration(labelText: 'School Class / Grade *'),
+                            items: availableClasses.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedClassId = val;
+                                final sections = val != null ? data.getSectionsForClass(val) : <Batch>[];
+                                _selectedBatchId = sections.length == 1 ? sections.first.id : null;
+                              });
+                            },
+                            validator: (v) => v == null ? 'Class is required' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Section dropdown
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            value: _selectedBatchId,
+                            decoration: InputDecoration(
+                              labelText: 'Section *',
+                              helperText: _selectedClassId == null
+                                  ? 'Select class first'
+                                  : (availableSections.isEmpty ? 'No sections found' : null),
+                            ),
+                            items: availableSections.map((b) {
+                              return DropdownMenuItem(
+                                value: b.id,
+                                child: Text('${b.name} (${b.monthlyFee.format()}/mo)'),
+                              );
+                            }).toList(),
+                            onChanged: _selectedClassId == null || availableSections.isEmpty
+                                ? null
+                                : (val) => setState(() => _selectedBatchId = val),
+                            validator: (v) => v == null ? 'Section is required' : null,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, __) => const Text('Failed to load academic options', style: TextStyle(color: AppColors.overdue)),
+                ),
+                const SizedBox(height: 12),
+
                 Row(
                   children: [
                     Expanded(
-                      child: academicDataAsync.when(
-                        data: (data) {
-                          if (data.batches.isEmpty) {
-                            return const Text('No batches available. Create a batch first.',
-                                style: TextStyle(color: AppColors.overdue, fontSize: 13));
-                          }
-                          return DropdownButtonFormField<int>(
-                            value: _selectedBatchId,
-                            decoration: const InputDecoration(labelText: 'Batch / Section *'),
-                            items: data.batches
-                                .map((b) => DropdownMenuItem(
-                                      value: b.id,
-                                      child: Text('${b.name} (${b.monthlyFee.format()}/mo)'),
-                                    ))
-                                .toList(),
-                            onChanged: (val) => setState(() => _selectedBatchId = val),
-                          );
-                        },
-                        loading: () => const LinearProgressIndicator(),
-                        error: (_, __) => const Text('Failed to load batches'),
+                      child: AppTextField(
+                        controller: _rollNumberCtrl,
+                        label: 'Admission / Roll No. (Optional)',
+                        hint: 'Auto-generated if empty',
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -200,7 +265,7 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                         data: (families) {
                           return DropdownButtonFormField<int?>(
                             value: _selectedFamilyId,
-                            decoration: const InputDecoration(labelText: 'Family / Sibling Link'),
+                            decoration: const InputDecoration(labelText: 'Family Link (Siblings)'),
                             items: <DropdownMenuItem<int?>>[
                               const DropdownMenuItem<int?>(value: null, child: Text('None (Individual)')),
                               ...families.map((f) => DropdownMenuItem<int?>(
@@ -216,11 +281,6 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 12),
-                AppTextField(
-                  controller: _rollNumberCtrl,
-                  label: 'Custom Roll Number (Leave empty for auto-generated)',
                 ),
                 const SizedBox(height: 24),
                 Row(

@@ -2,19 +2,26 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../../../core/printing/pdf_document_service.dart';
+import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
 import '../../domain/entities/student_entities.dart';
 
 class StudentIdCardDialog extends StatelessWidget {
   final Student student;
   final String batchName;
   final String academyName;
+  final String? academyPhone;
+  final String? academyAddress;
 
   const StudentIdCardDialog({
     super.key,
     required this.student,
     required this.batchName,
     this.academyName = 'ClassKhata Academy',
+    this.academyPhone,
+    this.academyAddress,
   });
 
   @override
@@ -135,12 +142,22 @@ class StudentIdCardDialog extends StatelessWidget {
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
                       icon: const Icon(Icons.print, size: 16),
-                      label: const Text('Print Card'),
+                      label: const Text('Print Preview'),
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Sent to printer preview.')),
+                        PdfPrintPreviewDialog.show(
+                          context,
+                          title: 'Student ID Card - ${student.name}',
+                          initialFormat: PdfPageFormat.a4,
+                          pdfFileName: 'id_card_${student.rollNumber}.pdf',
+                          buildPdf: (format) => PdfDocumentService.generateStudentIdCardPdf(
+                            student: student,
+                            academyName: academyName,
+                            batchName: batchName,
+                            academyPhone: academyPhone,
+                            academyAddress: academyAddress,
+                            format: format,
+                          ),
                         );
-                        Navigator.of(context).pop();
                       },
                     ),
                   ],

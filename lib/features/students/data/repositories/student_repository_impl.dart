@@ -66,6 +66,7 @@ class StudentRepositoryImpl implements StudentRepository {
           phone: Value(phone),
           email: Value(email),
           familyId: Value(familyId),
+          status: const Value('active'),
           createdBy: Value(createdBy),
         ),
       );
@@ -137,6 +138,7 @@ class StudentRepositoryImpl implements StudentRepository {
           guardianPhone: row.guardianPhone,
           phone: Value(row.phone),
           email: Value(row.email),
+          status: const Value('active'),
           createdBy: Value(createdBy),
         ));
       }

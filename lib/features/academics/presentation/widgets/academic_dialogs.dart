@@ -1,4 +1,4 @@
-/// Dialogs for adding Sessions, Courses, and Batches.
+/// Dialogs for managing Academic Sessions, School Classes, and Class Sections.
 library;
 
 import 'package:flutter/material.dart';
@@ -9,10 +9,12 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
+import '../../domain/entities/academic_entities.dart';
 import '../providers/academic_providers.dart';
 
 // ---------------------------------------------------------------------------
-// Create Session Dialog
+// 1. Create Academic Session Dialog
 // ---------------------------------------------------------------------------
 
 class CreateSessionDialog extends ConsumerStatefulWidget {
@@ -23,7 +25,7 @@ class CreateSessionDialog extends ConsumerStatefulWidget {
 }
 
 class _CreateSessionDialogState extends ConsumerState<CreateSessionDialog> {
-  final _nameCtrl = TextEditingController(text: '2026-2027');
+  final _nameCtrl = TextEditingController(text: '${DateTime.now().year}-${DateTime.now().year + 1}');
   bool _isCurrent = true;
   bool _isLoading = false;
   String? _errorMessage;
@@ -74,35 +76,6 @@ class _CreateSessionDialogState extends ConsumerState<CreateSessionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return _dialogWrapper(
-      title: 'New Academic Session',
-      errorMessage: _errorMessage,
-      children: [
-        AppTextField(
-          controller: _nameCtrl,
-          label: 'Session Name (e.g. 2026-2027)',
-          autofocus: true,
-        ),
-        const SizedBox(height: 12),
-        SwitchListTile(
-          title: const Text('Mark as Current Session'),
-          value: _isCurrent,
-          onChanged: (val) => setState(() => _isCurrent = val),
-          contentPadding: EdgeInsets.zero,
-        ),
-      ],
-      isLoading: _isLoading,
-      onSubmit: _submit,
-    );
-  }
-
-  Widget _dialogWrapper({
-    required String title,
-    required String? errorMessage,
-    required List<Widget> children,
-    required bool isLoading,
-    required VoidCallback onSubmit,
-  }) {
     return Dialog(
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -114,24 +87,36 @@ class _CreateSessionDialogState extends ConsumerState<CreateSessionDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading),
+              const Text(
+                'New Academic Session',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading),
               ),
               const Divider(),
               const SizedBox(height: 8),
-              if (errorMessage != null) ...[
-                ErrorBanner(message: errorMessage),
+              if (_errorMessage != null) ...[
+                ErrorBanner(message: _errorMessage!),
                 const SizedBox(height: 12),
               ],
-              ...children,
+              AppTextField(
+                controller: _nameCtrl,
+                label: 'Academic Session (e.g. 2026-2027) *',
+                autofocus: true,
+              ),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                title: const Text('Set as Active Academic Session'),
+                subtitle: const Text('New student enrollments will default to this session.', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                value: _isCurrent,
+                onChanged: (val) => setState(() => _isCurrent = val),
+                contentPadding: EdgeInsets.zero,
+              ),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
                   const SizedBox(width: 12),
-                  PrimaryButton(label: 'Save', isLoading: isLoading, onPressed: onSubmit),
+                  PrimaryButton(label: 'Save Session', isLoading: _isLoading, onPressed: _submit),
                 ],
               ),
             ],
@@ -143,7 +128,112 @@ class _CreateSessionDialogState extends ConsumerState<CreateSessionDialog> {
 }
 
 // ---------------------------------------------------------------------------
-// Create Course Dialog
+// 2. Manage Academic Sessions Modal
+// ---------------------------------------------------------------------------
+
+class ManageSessionsDialog extends ConsumerWidget {
+  const ManageSessionsDialog({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final academicDataAsync = ref.watch(academicDataProvider);
+
+    return Dialog(
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 600),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Academic Sessions',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading),
+                  ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Add Session'),
+                    onPressed: () => showDialog(
+                      context: context,
+                      builder: (_) => const CreateSessionDialog(),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 20),
+              Expanded(
+                child: academicDataAsync.when(
+                  data: (data) {
+                    if (data.sessions.isEmpty) {
+                      return const Center(child: Text('No academic sessions created yet.'));
+                    }
+                    return ListView.separated(
+                      itemCount: data.sessions.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (ctx, i) {
+                        final session = data.sessions[i];
+                        return ListTile(
+                          title: Row(
+                            children: [
+                              Text(session.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                              if (session.isCurrent) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.paidBg,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text('ACTIVE', style: TextStyle(color: AppColors.paid, fontSize: 10, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ],
+                          ),
+                          subtitle: Text(
+                            'Period: ${session.startDate.day}/${session.startDate.month}/${session.startDate.year} - ${session.endDate.day}/${session.endDate.month}/${session.endDate.year}',
+                            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                          ),
+                          trailing: session.isCurrent
+                              ? const Icon(Icons.check_circle, color: AppColors.paid, size: 22)
+                              : TextButton(
+                                  child: const Text('Make Active'),
+                                  onPressed: () async {
+                                    final setUseCase = ref.read(setCurrentSessionUseCaseProvider);
+                                    await setUseCase(session.id);
+                                    ref.invalidate(academicDataProvider);
+                                  },
+                                ),
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('Error: $e')),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 3. Create Class / Grade Dialog
 // ---------------------------------------------------------------------------
 
 class CreateCourseDialog extends ConsumerStatefulWidget {
@@ -152,6 +242,8 @@ class CreateCourseDialog extends ConsumerStatefulWidget {
   @override
   ConsumerState<CreateCourseDialog> createState() => _CreateCourseDialogState();
 }
+
+typedef CreateClassDialog = CreateCourseDialog;
 
 class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
   final _nameCtrl = TextEditingController();
@@ -171,7 +263,7 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
   Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      setState(() => _errorMessage = 'Course name is required.');
+      setState(() => _errorMessage = 'Class name is required.');
       return;
     }
 
@@ -195,6 +287,7 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
     result.fold(
       onSuccess: (_) {
         ref.invalidate(academicDataProvider);
+        ref.invalidate(dashboardKpisProvider);
         Navigator.of(context).pop(true);
       },
       onFailure: (f) => setState(() {
@@ -210,32 +303,43 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 450),
+        constraints: const BoxConstraints(maxWidth: 480),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Add Course / Class', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading)),
+              const Text('Add School Class / Grade', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading)),
               const Divider(),
               const SizedBox(height: 8),
               if (_errorMessage != null) ...[
                 ErrorBanner(message: _errorMessage!),
                 const SizedBox(height: 12),
               ],
-              AppTextField(controller: _nameCtrl, label: 'Course Name (e.g. Matric Science) *', autofocus: true),
+              AppTextField(
+                controller: _nameCtrl,
+                label: 'Class Name (e.g. Class 9, Grade 10, Matric Science) *',
+                autofocus: true,
+              ),
               const SizedBox(height: 12),
-              AppTextField(controller: _codeCtrl, label: 'Course Code (Optional)'),
+              AppTextField(
+                controller: _codeCtrl,
+                label: 'Class Code / Level (e.g. 9, 10, CL-09)',
+              ),
               const SizedBox(height: 12),
-              AppTextField(controller: _descCtrl, label: 'Description (Optional)', maxLines: 2),
+              AppTextField(
+                controller: _descCtrl,
+                label: 'Description / Curriculum Notes (Optional)',
+                maxLines: 2,
+              ),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
                   const SizedBox(width: 12),
-                  PrimaryButton(label: 'Save Course', isLoading: _isLoading, onPressed: _submit),
+                  PrimaryButton(label: 'Save Class', isLoading: _isLoading, onPressed: _submit),
                 ],
               ),
             ],
@@ -247,27 +351,40 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
 }
 
 // ---------------------------------------------------------------------------
-// Create Batch Dialog
+// 4. Create Section Dialog
 // ---------------------------------------------------------------------------
 
 class CreateBatchDialog extends ConsumerStatefulWidget {
-  const CreateBatchDialog({super.key});
+  final int? initialCourseId;
+
+  const CreateBatchDialog({
+    super.key,
+    this.initialCourseId,
+  });
 
   @override
   ConsumerState<CreateBatchDialog> createState() => _CreateBatchDialogState();
 }
 
+typedef CreateSectionDialog = CreateBatchDialog;
+
 class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
-  final _nameCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController(text: 'Section A');
   final _instructorCtrl = TextEditingController();
   final _timingCtrl = TextEditingController();
-  final _feeCtrl = TextEditingController(text: '3000');
+  final _feeCtrl = TextEditingController(text: '3500');
   final _dueDayCtrl = TextEditingController(text: '10');
 
   int? _selectedSessionId;
   int? _selectedCourseId;
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCourseId = widget.initialCourseId;
+  }
 
   @override
   void dispose() {
@@ -281,12 +398,12 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
 
   Future<void> _submit() async {
     if (_selectedSessionId == null || _selectedCourseId == null) {
-      setState(() => _errorMessage = 'Please select both session and course.');
+      setState(() => _errorMessage = 'Please select both session and class.');
       return;
     }
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      setState(() => _errorMessage = 'Batch name is required.');
+      setState(() => _errorMessage = 'Section name is required (e.g. Section A).');
       return;
     }
 
@@ -310,8 +427,8 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
       sessionId: _selectedSessionId!,
       courseId: _selectedCourseId!,
       name: name,
-      instructorName: _instructorCtrl.text.trim(),
-      timing: _timingCtrl.text.trim(),
+      instructorName: _instructorCtrl.text.trim().isEmpty ? null : _instructorCtrl.text.trim(),
+      timing: _timingCtrl.text.trim().isEmpty ? null : _timingCtrl.text.trim(),
       monthlyFee: Money.fromRupees(feeRupees),
       dueDay: dueDay,
       createdBy: currentUser?.id ?? 1,
@@ -322,6 +439,7 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
     result.fold(
       onSuccess: (_) {
         ref.invalidate(academicDataProvider);
+        ref.invalidate(dashboardKpisProvider);
         Navigator.of(context).pop(true);
       },
       onFailure: (f) => setState(() {
@@ -339,14 +457,14 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 500),
+        constraints: const BoxConstraints(maxWidth: 520),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Add New Batch / Section', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading)),
+              const Text('Add Class Section', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading)),
               const Divider(),
               const SizedBox(height: 8),
               if (_errorMessage != null) ...[
@@ -354,38 +472,58 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
                 const SizedBox(height: 12),
               ],
               academicDataAsync.when(
-                data: (data) => Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<int>(
-                        value: _selectedSessionId ?? (data.sessions.isNotEmpty ? data.sessions.first.id : null),
-                        decoration: const InputDecoration(labelText: 'Session *'),
-                        items: data.sessions.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                        onChanged: (val) => setState(() => _selectedSessionId = val),
+                data: (data) {
+                  // Ensure default selections
+                  final currentSession = data.currentSession;
+                  _selectedSessionId ??= currentSession?.id ?? (data.sessions.isNotEmpty ? data.sessions.first.id : null);
+                  _selectedCourseId ??= widget.initialCourseId ?? (data.courses.isNotEmpty ? data.courses.first.id : null);
+
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          value: _selectedSessionId,
+                          decoration: const InputDecoration(labelText: 'Academic Session *'),
+                          items: data.sessions.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+                          onChanged: (val) => setState(() => _selectedSessionId = val),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonFormField<int>(
-                        value: _selectedCourseId ?? (data.courses.isNotEmpty ? data.courses.first.id : null),
-                        decoration: const InputDecoration(labelText: 'Course *'),
-                        items: data.courses.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                        onChanged: (val) => setState(() => _selectedCourseId = val),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
+                          value: _selectedCourseId,
+                          decoration: const InputDecoration(labelText: 'School Class *'),
+                          items: data.courses.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                          onChanged: (val) => setState(() => _selectedCourseId = val),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  );
+                },
                 loading: () => const LinearProgressIndicator(),
                 error: (_, __) => const Text('Failed to load academic options'),
               ),
               const SizedBox(height: 12),
-              AppTextField(controller: _nameCtrl, label: 'Batch Name (e.g. Morning-A) *'),
+              AppTextField(
+                controller: _nameCtrl,
+                label: 'Section Name (e.g. Section A, Rose, Morning) *',
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(child: AppTextField(controller: _instructorCtrl, label: 'Instructor (Optional)')),
+                  Expanded(
+                    child: AppTextField(
+                      controller: _instructorCtrl,
+                      label: 'Class Teacher / In-charge (Optional)',
+                    ),
+                  ),
                   const SizedBox(width: 12),
-                  Expanded(child: AppTextField(controller: _timingCtrl, label: 'Timing (e.g. 9-11 AM)')),
+                  Expanded(
+                    child: AppTextField(
+                      controller: _timingCtrl,
+                      label: 'Room / Hall (e.g. Room 10)',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -394,7 +532,7 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
                   Expanded(
                     child: AppTextField(
                       controller: _feeCtrl,
-                      label: 'Monthly Fee (Rs.) *',
+                      label: 'Monthly Tuition Fee (Rs.) *',
                       keyboardType: TextInputType.number,
                     ),
                   ),
@@ -402,7 +540,7 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
                   Expanded(
                     child: AppTextField(
                       controller: _dueDayCtrl,
-                      label: 'Fee Due Day (1 - 28) *',
+                      label: 'Fee Due Day of Month (1 - 28) *',
                       keyboardType: TextInputType.number,
                     ),
                   ),
@@ -414,7 +552,7 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
                 children: [
                   OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
                   const SizedBox(width: 12),
-                  PrimaryButton(label: 'Save Batch', isLoading: _isLoading, onPressed: _submit),
+                  PrimaryButton(label: 'Save Section', isLoading: _isLoading, onPressed: _submit),
                 ],
               ),
             ],

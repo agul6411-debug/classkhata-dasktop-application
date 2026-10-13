@@ -23,6 +23,10 @@ final createSessionUseCaseProvider = Provider<CreateSessionUseCase>((ref) {
   return CreateSessionUseCase(ref.watch(academicRepositoryProvider));
 });
 
+final setCurrentSessionUseCaseProvider = Provider<SetCurrentSessionUseCase>((ref) {
+  return SetCurrentSessionUseCase(ref.watch(academicRepositoryProvider));
+});
+
 final createCourseUseCaseProvider = Provider<CreateCourseUseCase>((ref) {
   return CreateCourseUseCase(ref.watch(academicRepositoryProvider));
 });

@@ -114,3 +114,11 @@ class GetAcademicDataUseCase {
     ));
   }
 }
+
+class SetCurrentSessionUseCase {
+  final AcademicRepository _repository;
+  const SetCurrentSessionUseCase(this._repository);
+
+  Future<Result<void>> call(int sessionId) => _repository.setCurrentSession(sessionId);
+}
+

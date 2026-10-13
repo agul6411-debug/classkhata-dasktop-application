@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../../academics/presentation/providers/academic_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../fees/presentation/widgets/fee_collection_wizard.dart';
 import '../../../finance/presentation/widgets/add_expense_dialog.dart';
@@ -47,26 +48,41 @@ class DashboardPage extends ConsumerWidget {
                   ],
                 ),
                 // Month selector
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: DropdownButton<String>(
-                    value: selectedMonth,
-                    underline: const SizedBox.shrink(),
-                    icon: const Icon(Icons.calendar_month, color: AppColors.accent, size: 20),
-                    items: _generateMonthOptions().map((m) {
-                      return DropdownMenuItem(value: m.value, child: Text(m.label));
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        ref.read(selectedDashboardMonthProvider.notifier).state = val;
-                      }
-                    },
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: DropdownButton<String>(
+                        value: selectedMonth,
+                        underline: const SizedBox.shrink(),
+                        icon: const Icon(Icons.calendar_month, color: AppColors.accent, size: 20),
+                        items: _generateMonthOptions().map((m) {
+                          return DropdownMenuItem(value: m.value, child: Text(m.label));
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            ref.read(selectedDashboardMonthProvider.notifier).state = val;
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: 'Refresh Dashboard',
+                      child: IconButton(
+                        icon: const Icon(Icons.refresh, color: AppColors.accent),
+                        onPressed: () {
+                          ref.invalidate(dashboardKpisProvider);
+                          ref.invalidate(academicDataProvider);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -92,10 +108,13 @@ class DashboardPage extends ConsumerWidget {
                     OutlinedButton.icon(
                       icon: const Icon(Icons.person_add, size: 16),
                       label: const Text('Add Student'),
-                      onPressed: () => showDialog(
-                        context: context,
-                        builder: (_) => const StudentFormDialog(),
-                      ),
+                      onPressed: () async {
+                        await showDialog(
+                          context: context,
+                          builder: (_) => const StudentFormDialog(),
+                        );
+                        ref.invalidate(dashboardKpisProvider);
+                      },
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
@@ -180,13 +199,13 @@ class DashboardPage extends ConsumerWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Academy Directory', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                const Text('School Directory', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                 const Divider(height: 20),
                                 _directoryRow(Icons.school, 'Active Students', kpis.studentsCount.toString()),
                                 const SizedBox(height: 12),
-                                _directoryRow(Icons.auto_stories, 'Courses / Classes', kpis.coursesCount.toString()),
+                                _directoryRow(Icons.auto_stories, 'School Classes', kpis.coursesCount.toString()),
                                 const SizedBox(height: 12),
-                                _directoryRow(Icons.groups, 'Active Batches', kpis.batchesCount.toString()),
+                                _directoryRow(Icons.groups, 'Class Sections', kpis.batchesCount.toString()),
                               ],
                             ),
                           ),

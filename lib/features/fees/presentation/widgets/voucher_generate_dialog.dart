@@ -7,6 +7,7 @@ import '../../../../app/theme/app_theme.dart';
 import '../../../../core/security/permission_service.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../../../academics/domain/entities/academic_entities.dart';
 import '../../../academics/presentation/providers/academic_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../providers/fee_providers.dart';
@@ -27,7 +28,7 @@ class _VoucherGenerateDialogState extends ConsumerState<VoucherGenerateDialog> {
 
   Future<void> _submit() async {
     if (_selectedBatchId == null) {
-      setState(() => _errorMessage = 'Please select a batch.');
+      setState(() => _errorMessage = 'Please select a Class & Section.');
       return;
     }
 
@@ -92,14 +93,17 @@ class _VoucherGenerateDialogState extends ConsumerState<VoucherGenerateDialog> {
               academicDataAsync.when(
                 data: (data) => DropdownButtonFormField<int>(
                   value: _selectedBatchId,
-                  decoration: const InputDecoration(labelText: 'Target Batch *'),
+                  decoration: const InputDecoration(labelText: 'Target Class & Section *'),
                   items: data.batches
-                      .map((b) => DropdownMenuItem(value: b.id, child: Text('${b.name} (${b.monthlyFee.format()})')))
+                      .map((b) => DropdownMenuItem(
+                            value: b.id,
+                            child: Text('${data.getFullSectionName(b.id)} (${b.monthlyFee.format()})'),
+                          ))
                       .toList(),
                   onChanged: (val) => setState(() => _selectedBatchId = val),
                 ),
                 loading: () => const LinearProgressIndicator(),
-                error: (_, __) => const Text('Failed to load batches'),
+                error: (_, __) => const Text('Failed to load classes & sections'),
               ),
               const SizedBox(height: 12),
               TextFormField(
