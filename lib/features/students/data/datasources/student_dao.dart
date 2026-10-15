@@ -51,6 +51,22 @@ class StudentDao {
   Future<int> insertStudent(StudentsTableCompanion companion) =>
       _db.into(_db.studentsTable).insert(companion);
 
+  Future<int> updateStudent(int studentId, StudentsTableCompanion companion) =>
+      (_db.update(_db.studentsTable)..where((t) => t.id.equals(studentId))).write(companion);
+
+  Future<int> deleteStudent(int studentId) =>
+      (_db.delete(_db.studentsTable)..where((t) => t.id.equals(studentId))).go();
+
+  Future<List<StudentsTableData>> getStudentsByGuardianPhone(String phone) {
+    final clean = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    return (_db.select(_db.studentsTable)
+          ..where((t) => t.guardianPhone.equals(phone) | t.guardianPhone.like('%$clean%')))
+        .get();
+  }
+
+  Future<List<StudentsTableData>> getStudentsByFamilyId(int familyId) =>
+      (_db.select(_db.studentsTable)..where((t) => t.familyId.equals(familyId))).get();
+
   Future<void> updateStudentStatus(int studentId, String status) =>
       (_db.update(_db.studentsTable)..where((t) => t.id.equals(studentId))).write(
         StudentsTableCompanion(status: Value(status)),

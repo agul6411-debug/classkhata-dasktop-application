@@ -40,6 +40,23 @@ abstract interface class StudentRepository {
     required int createdBy,
   });
 
+  Future<Result<void>> updateStudent({
+    required int id,
+    required String name,
+    required int batchId,
+    required String guardianPhone,
+    String? phone,
+    String? email,
+    String? rollNumber,
+    int? familyId,
+  });
+
+  Future<Result<void>> deleteStudent(int id);
+
+  Future<Result<List<Student>>> getStudentsByGuardianPhone(String phone);
+
+  Future<Result<List<Student>>> getStudentsByFamilyId(int familyId);
+
   // Families
   Future<Result<List<Family>>> getFamilies();
   Future<Result<Family>> createFamily({

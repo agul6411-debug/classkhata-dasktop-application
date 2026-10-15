@@ -1,22 +1,26 @@
-/// Student ID card view and printable layout.
+/// Student ID card view and printable layout with actual student photo and father details.
 library;
 
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/printing/pdf_document_service.dart';
 import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
 import '../../domain/entities/student_entities.dart';
+import '../providers/student_providers.dart';
 
-class StudentIdCardDialog extends StatelessWidget {
-
+class StudentIdCardDialog extends ConsumerWidget {
   const StudentIdCardDialog({
     super.key,
     required this.student,
     required this.batchName,
-    this.academyName = 'ClassKhata Academy',
+    this.academyName = 'School Name',
     this.academyPhone,
     this.academyAddress,
   });
+
   final Student student;
   final String batchName;
   final String academyName;
@@ -24,7 +28,10 @@ class StudentIdCardDialog extends StatelessWidget {
   final String? academyAddress;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(studentProfileProvider(student.id));
+    final profile = profileAsync.valueOrNull;
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: ConstrainedBox(
@@ -32,9 +39,9 @@ class StudentIdCardDialog extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: const [
-              BoxShadow(color: Colors.black26, blurRadius: 10, spreadRadius: 2),
+              BoxShadow(color: Colors.black26, blurRadius: 16, spreadRadius: 2),
             ],
           ),
           child: Column(
@@ -44,8 +51,8 @@ class StudentIdCardDialog extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                 decoration: const BoxDecoration(
-                  color: AppColors.heading,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                  color: Color(0xFF1E3A8A), // Royal navy blue
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                 ),
                 child: Row(
                   children: [
@@ -62,11 +69,12 @@ class StudentIdCardDialog extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const Text(
                             'STUDENT IDENTITY CARD',
                             style: TextStyle(
-                              color: AppColors.accentLight,
+                              color: Colors.white70,
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 1.2,
@@ -78,85 +86,110 @@ class StudentIdCardDialog extends StatelessWidget {
                   ],
                 ),
               ),
+
               // Card Body
               Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(22),
                 child: Column(
                   children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: AppColors.inputFill,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.accent, width: 2),
-                      ),
-                      child: const Icon(Icons.person, size: 48, color: AppColors.accent),
+                    // Student Photo
+                    CircleAvatar(
+                      radius: 42,
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      backgroundImage: profile?.photoPath != null && File(profile!.photoPath!).existsSync()
+                          ? FileImage(File(profile.photoPath!))
+                          : null,
+                      child: profile?.photoPath == null || !File(profile!.photoPath!).existsSync()
+                          ? const Icon(Icons.person, size: 48, color: Color(0xFF1E3A8A))
+                          : null,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     Text(
                       student.name,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.heading,
+                        color: Color(0xFF0F172A),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      student.rollNumber,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.accent,
-                        letterSpacing: 1.5,
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        student.rollNumber,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1E3A8A),
+                          letterSpacing: 1.2,
+                        ),
                       ),
                     ),
-                    const Divider(height: 28),
-                    _infoRow('Batch', batchName),
-                    const SizedBox(height: 8),
-                    _infoRow('Guardian Phone', student.guardianPhone),
-                    if (student.phone != null) ...[
-                      const SizedBox(height: 8),
-                      _infoRow('Contact', student.phone!),
+                    const Divider(height: 24, color: Color(0xFFE2E8F0)),
+                    if (profile?.fatherName != null && profile!.fatherName!.isNotEmpty) ...[
+                      _infoRow('Father Name', profile.fatherName!),
+                      const SizedBox(height: 6),
                     ],
-                    const SizedBox(height: 8),
+                    _infoRow('Class / Section', batchName),
+                    const SizedBox(height: 6),
+                    _infoRow('Guardian Phone', student.guardianPhone),
+                    if (student.phone != null && student.phone!.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      _infoRow('Contact Phone', student.phone!),
+                    ],
+                    const SizedBox(height: 6),
                     _infoRow(
-                      'Issued',
+                      'Issue Date',
                       '${student.joiningDate.day}/${student.joiningDate.month}/${student.joiningDate.year}',
                     ),
+                    if (academyPhone != null && academyPhone!.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      _infoRow('School Tel', academyPhone!),
+                    ],
                   ],
                 ),
               ),
+
               // Card Footer Actions
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16, left: 20, right: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Close'),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Close'),
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.print, size: 16),
-                      label: const Text('Print Preview'),
-                      onPressed: () {
-                        PdfPrintPreviewDialog.show(
-                          context,
-                          title: 'Student ID Card - ${student.name}',
-                          pdfFileName: 'id_card_${student.rollNumber}.pdf',
-                          buildPdf: (format) => PdfDocumentService.generateStudentIdCardPdf(
-                            student: student,
-                            academyName: academyName,
-                            batchName: batchName,
-                            academyPhone: academyPhone,
-                            academyAddress: academyAddress,
-                            format: format,
-                          ),
-                        );
-                      },
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.print, size: 16),
+                        label: const Text('Print Card'),
+                        onPressed: () {
+                          PdfPrintPreviewDialog.show(
+                            context,
+                            title: 'Student ID Card (${student.rollNumber})',
+                            pdfFileName: 'ID_Card_${student.rollNumber}.pdf',
+                            buildPdf: (format) => PdfDocumentService.generateStudentIdCardPdf(
+                              student: student,
+                              batchName: batchName,
+                              academyName: academyName,
+                              academyPhone: academyPhone,
+                              academyAddress: academyAddress,
+                              format: format,
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -172,8 +205,18 @@ class StudentIdCardDialog extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1E293B),
+          ),
+        ),
       ],
     );
   }

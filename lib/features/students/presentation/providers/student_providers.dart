@@ -6,7 +6,9 @@ import '../../../../app/providers.dart';
 import '../../data/datasources/student_dao.dart';
 import '../../data/repositories/student_repository_impl.dart';
 import '../../domain/entities/student_entities.dart';
+import '../../domain/entities/student_profile.dart';
 import '../../domain/repositories/student_repository.dart';
+import '../../domain/services/student_profile_service.dart';
 import '../../domain/usecases/bulk_import_students_usecase.dart';
 import '../../domain/usecases/register_student_usecase.dart';
 import '../../domain/usecases/student_management_usecases.dart';
@@ -96,10 +98,29 @@ final studentsListProvider = FutureProvider<List<Student>>((ref) async {
 
 /// Future provider querying family groups.
 final familiesListProvider = FutureProvider<List<Family>>((ref) async {
+  ref.watch(studentListVersionProvider);
   final repo = ref.watch(studentRepositoryProvider);
   final result = await repo.getFamilies();
   return result.fold(
     onSuccess: (families) => families,
     onFailure: (f) => throw Exception(f.message),
   );
+});
+
+/// Family students query
+final familyStudentsProvider = FutureProvider.family<List<Student>, int>((ref, familyId) async {
+  ref.watch(studentListVersionProvider);
+  final repo = ref.watch(studentRepositoryProvider);
+  final result = await repo.getStudentsByFamilyId(familyId);
+  return result.fold(
+    onSuccess: (students) => students,
+    onFailure: (f) => throw Exception(f.message),
+  );
+});
+
+/// Student Profile provider (fetching photo, father details, fee package)
+final studentProfileProvider = FutureProvider.family<StudentProfile, int>((ref, studentId) async {
+  ref.watch(studentListVersionProvider);
+  final db = ref.watch(appDatabaseProvider);
+  return StudentProfileService.getProfile(db: db, studentId: studentId);
 });

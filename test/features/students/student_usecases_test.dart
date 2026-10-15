@@ -79,6 +79,27 @@ class MockStudentRepository implements StudentRepository {
       address: address,
     ));
   }
+
+  @override
+  Future<Result<void>> updateStudent({
+    required int id,
+    required String name,
+    required int batchId,
+    required String guardianPhone,
+    String? phone,
+    String? email,
+    String? rollNumber,
+    int? familyId,
+  }) async => const Success(null);
+
+  @override
+  Future<Result<void>> deleteStudent(int id) async => const Success(null);
+
+  @override
+  Future<Result<List<Student>>> getStudentsByGuardianPhone(String phone) async => const Success([]);
+
+  @override
+  Future<Result<List<Student>>> getStudentsByFamilyId(int familyId) async => const Success([]);
 }
 
 void main() {

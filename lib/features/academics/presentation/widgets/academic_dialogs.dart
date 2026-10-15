@@ -10,6 +10,7 @@ import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../dashboard/presentation/providers/dashboard_providers.dart';
+import '../../../payroll/presentation/providers/payroll_providers.dart';
 import '../../domain/entities/academic_entities.dart';
 import '../providers/academic_providers.dart';
 
@@ -374,6 +375,8 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
 
   int? _selectedSessionId;
   int? _selectedCourseId;
+  String? _selectedTeacherName;
+  bool _isCustomTeacher = false;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -420,11 +423,15 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
     final currentUser = ref.read(authSessionNotifierProvider);
     final useCase = ref.read(createBatchUseCaseProvider);
 
+    final instructor = _isCustomTeacher
+        ? _instructorCtrl.text.trim()
+        : (_selectedTeacherName ?? (_instructorCtrl.text.trim().isEmpty ? null : _instructorCtrl.text.trim()));
+
     final result = await useCase(
       sessionId: _selectedSessionId!,
       courseId: _selectedCourseId!,
       name: name,
-      instructorName: _instructorCtrl.text.trim().isEmpty ? null : _instructorCtrl.text.trim(),
+      instructorName: (instructor != null && instructor.isNotEmpty) ? instructor : null,
       timing: _timingCtrl.text.trim().isEmpty ? null : _timingCtrl.text.trim(),
       monthlyFee: Money.fromRupees(feeRupees),
       dueDay: dueDay,
@@ -506,12 +513,63 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
               ),
               const SizedBox(height: 12),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: AppTextField(
-                      controller: _instructorCtrl,
-                      label: 'Class Teacher / In-charge (Optional)',
-                    ),
+                    child: ref.watch(staffListProvider).when(
+                          data: (staffList) {
+                            final activeTeachers = staffList.where((s) => s.status.name.toLowerCase() == 'active').toList();
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                DropdownButtonFormField<String?>(
+                                  value: _selectedTeacherName,
+                                  decoration: const InputDecoration(labelText: 'Class Teacher (Staff List)'),
+                                  isExpanded: true,
+                                  items: [
+                                    const DropdownMenuItem<String?>(
+                                      value: null,
+                                      child: Text('None (No Teacher Assigned)', overflow: TextOverflow.ellipsis),
+                                    ),
+                                    ...activeTeachers.map((s) => DropdownMenuItem<String?>(
+                                          value: s.name,
+                                          child: Text('${s.name} (${s.designation})', overflow: TextOverflow.ellipsis),
+                                        )),
+                                    const DropdownMenuItem<String?>(
+                                      value: '__CUSTOM__',
+                                      child: Text('+ Custom / Unregistered Teacher', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+                                    ),
+                                  ],
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (val == '__CUSTOM__') {
+                                        _isCustomTeacher = true;
+                                        _selectedTeacherName = '__CUSTOM__';
+                                      } else {
+                                        _isCustomTeacher = false;
+                                        _selectedTeacherName = val;
+                                        _instructorCtrl.text = val ?? '';
+                                      }
+                                    });
+                                  },
+                                ),
+                                if (_isCustomTeacher) ...[
+                                  const SizedBox(height: 8),
+                                  AppTextField(
+                                    controller: _instructorCtrl,
+                                    label: 'Teacher Full Name',
+                                    autofocus: true,
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
+                          loading: () => const LinearProgressIndicator(),
+                          error: (_, __) => AppTextField(
+                            controller: _instructorCtrl,
+                            label: 'Class Teacher / In-charge',
+                          ),
+                        ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

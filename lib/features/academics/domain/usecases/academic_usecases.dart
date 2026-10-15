@@ -122,3 +122,17 @@ class SetCurrentSessionUseCase {
   Future<Result<void>> call(int sessionId) => _repository.setCurrentSession(sessionId);
 }
 
+class DeleteBatchUseCase {
+  const DeleteBatchUseCase(this._repository);
+  final AcademicRepository _repository;
+
+  Future<Result<void>> call(int batchId) => _repository.deleteBatch(batchId);
+}
+
+class DeleteCourseUseCase {
+  const DeleteCourseUseCase(this._repository);
+  final AcademicRepository _repository;
+
+  Future<Result<void>> call(int courseId) => _repository.deleteCourse(courseId);
+}
+

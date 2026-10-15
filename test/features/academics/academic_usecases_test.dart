@@ -75,6 +75,12 @@ class MockAcademicRepository implements AcademicRepository {
   @override
   Future<Result<void>> updateBatchStatus({required int batchId, required bool isActive}) async =>
       const Success(null);
+
+  @override
+  Future<Result<void>> deleteBatch(int batchId) async => const Success(null);
+
+  @override
+  Future<Result<void>> deleteCourse(int courseId) async => const Success(null);
 }
 
 void main() {

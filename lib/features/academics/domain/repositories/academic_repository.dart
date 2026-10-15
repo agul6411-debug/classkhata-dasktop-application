@@ -39,4 +39,6 @@ abstract interface class AcademicRepository {
     required int createdBy,
   });
   Future<Result<void>> updateBatchStatus({required int batchId, required bool isActive});
+  Future<Result<void>> deleteBatch(int batchId);
+  Future<Result<void>> deleteCourse(int courseId);
 }

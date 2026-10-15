@@ -55,7 +55,7 @@ void main() {
       expect(String.fromCharCodes(a4Bytes.take(5)), equals('%PDF-'));
     });
 
-    test('generateFeeVoucherPdf produces valid 3-copy voucher PDF', () async {
+    test('generateFeeVoucherPdf produces valid 2-copy voucher PDF', () async {
       final voucher = FeeVoucher(
         id: 1,
         voucherNumber: 'VCH-2026-10-001',

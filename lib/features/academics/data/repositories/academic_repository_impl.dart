@@ -199,4 +199,34 @@ class AcademicRepositoryImpl implements AcademicRepository {
       return Failure(DatabaseFailure('Could not update batch status.', technicalDetail: e.toString()));
     }
   }
+
+  @override
+  Future<Result<void>> deleteBatch(int batchId) async {
+    try {
+      final studentCount = await _dao.getStudentCountInBatch(batchId);
+      if (studentCount > 0) {
+        return Failure(ValidationFailure('Cannot delete section: $studentCount student(s) are currently enrolled. Reassign them first.'));
+      }
+      await _dao.deleteBatch(batchId);
+      return const Success(null);
+    } catch (e, st) {
+      await AppLogger.instance.error('deleteBatch error', error: e, stack: st);
+      return Failure(DatabaseFailure('Could not delete section.', technicalDetail: e.toString()));
+    }
+  }
+
+  @override
+  Future<Result<void>> deleteCourse(int courseId) async {
+    try {
+      final batches = await _dao.getBatches(courseId: courseId);
+      if (batches.isNotEmpty) {
+        return Failure(ValidationFailure('Cannot delete class: It contains active sections. Delete the sections first.'));
+      }
+      await _dao.deleteCourse(courseId);
+      return const Success(null);
+    } catch (e, st) {
+      await AppLogger.instance.error('deleteCourse error', error: e, stack: st);
+      return Failure(DatabaseFailure('Could not delete class.', technicalDetail: e.toString()));
+    }
+  }
 }

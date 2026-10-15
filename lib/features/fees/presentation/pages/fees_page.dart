@@ -17,7 +17,9 @@ import '../../../students/presentation/providers/student_providers.dart';
 import '../../domain/entities/fee_entities.dart';
 import '../providers/fee_providers.dart';
 import '../widgets/fee_collection_wizard.dart';
+import '../widgets/receipt_dialog.dart';
 import '../widgets/voucher_generate_dialog.dart';
+import '../widgets/fee_dues_broadcast_dialog.dart';
 
 class FeesPage extends ConsumerStatefulWidget {
   const FeesPage({super.key});
@@ -74,6 +76,20 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
                 ),
                 Row(
                   children: [
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.campaign, size: 16),
+                      label: const Text('10th Dues Reminders'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.warning,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                      ),
+                      onPressed: () => showDialog(
+                        context: context,
+                        builder: (_) => const FeeDuesBroadcastDialog(),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.receipt, size: 16),
                       label: const Text('Generate Vouchers'),
@@ -86,7 +102,7 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
                         builder: (_) => const VoucherGenerateDialog(),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     PrimaryButton(
                       label: 'Collect Fee',
                       icon: Icons.payments,
@@ -166,7 +182,7 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
         studentName: studentName,
         rollNumber: rollNumber,
         batchName: batchName,
-        academyName: academy?.name ?? 'ClassKhata Academy',
+        academyName: academy?.name ?? 'School Management System',
         academyPhone: academy?.phone,
         academyAddress: academy?.address,
         format: format,
@@ -192,99 +208,22 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
       return;
     }
 
-    final rawPhone = student.guardianPhone.replaceAll(RegExp(r'[^0-9]'), '');
-    final formattedPhone = rawPhone.startsWith('03')
-        ? '92${rawPhone.substring(1)}'
-        : rawPhone.startsWith('0')
-            ? '92${rawPhone.substring(1)}'
-            : rawPhone;
+    if (!mounted) return;
 
-    final academyName = academy?.name ?? 'ClassKhata School';
-    final remaining = voucher.balanceRemaining;
-    final isPaid = voucher.status == VoucherStatus.paid;
-    final isPartial = voucher.status == VoucherStatus.partial;
-    final dueDateStr =
-        '${voucher.dueDate.day.toString().padLeft(2, '0')}/${voucher.dueDate.month.toString().padLeft(2, '0')}/${voucher.dueDate.year}';
-
-    final title = isPaid
-        ? 'OFFICIAL FEE PAYMENT RECEIPT'
-        : isPartial
-            ? 'PARTIAL FEE PAYMENT RECEIPT'
-            : 'FEE CHALLAN & DUE NOTICE';
-
-    final statusStr = isPaid
-        ? 'PAID IN FULL ✅'
-        : isPartial
-            ? 'PARTIALLY PAID ⏳'
-            : 'PAYMENT DUE / PENDING ⚠️';
-
-    final buffer = StringBuffer();
-    buffer.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    buffer.writeln('🏫 *$academyName*');
-    buffer.writeln('📜 *$title*');
-    buffer.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    buffer.writeln('📋 *Voucher No :* ${voucher.voucherNumber}');
-    buffer.writeln('📅 *Fee Month  :* ${voucher.monthYear}');
-    buffer.writeln('⏰ *Due Date   :* $dueDateStr');
-    buffer.writeln('💳 *Status     :* $statusStr');
-    buffer.writeln();
-    buffer.writeln('👤 *STUDENT DETAILS*');
-    buffer.writeln('• *Student Name :* ${student.name}');
-    if (student.rollNumber.isNotEmpty) {
-      buffer.writeln('• *Roll Number  :* ${student.rollNumber}');
-    }
-    buffer.writeln('• *Class/Grade  :* $batchName');
-    buffer.writeln();
-    buffer.writeln('💰 *FEE CALCULATION BREAKDOWN*');
-    buffer.writeln('• Monthly Tuition  : ${voucher.baseAmount.format()}');
-    if (voucher.carryForward.paisa > 0) {
-      buffer.writeln('• Previous Arrears : ${voucher.carryForward.format()}');
-    }
-    if (voucher.lateFee.paisa > 0) {
-      buffer.writeln('• Late Surcharge   : ${voucher.lateFee.format()}');
-    }
-    if (voucher.discount.paisa > 0) {
-      buffer.writeln('• Concession/Disc. : -${voucher.discount.format()}');
-    }
-    buffer.writeln('──────────────────────────');
-    buffer.writeln('• *Total Bill Due   : ${voucher.totalDue.format()}*');
-    buffer.writeln('• *Total Paid So Far: ${voucher.amountPaid.format()}*');
-    buffer.writeln('• *Remaining Balance: ${remaining.format()}*');
-    buffer.writeln('──────────────────────────');
-    buffer.writeln('💳 *PAYMENT MODES ACCEPTED*');
-    buffer.writeln('• Hand Cash, JazzCash, EasyPaisa, Bank Transfer');
-    buffer.writeln();
-    final phone = academy?.phone;
-    if (phone != null && phone.isNotEmpty) {
-      buffer.writeln('📞 Contact: $phone');
-    }
-    final address = academy?.address;
-    if (address != null && address.isNotEmpty) {
-      buffer.writeln('📍 Location: $address');
-    }
-    buffer.writeln();
-    buffer.writeln('_Note: Verified digital receipt & ledger record from ClassKhata._');
-    buffer.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-    final text = buffer.toString();
-    await Clipboard.setData(ClipboardData(text: text));
-
-    final uri = Uri.parse('https://wa.me/$formattedPhone?text=${Uri.encodeComponent(text)}');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('WhatsApp receipt opened and copied to clipboard!'),
-          backgroundColor: Color(0xFF16A34A),
-        ),
-      );
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open WhatsApp. Receipt copied to clipboard.')),
-      );
-    }
+    showDialog(
+      context: context,
+      builder: (_) => ReceiptDialog(
+        voucher: voucher,
+        studentName: student.name,
+        guardianPhone: student.guardianPhone,
+        voucherNumber: voucher.voucherNumber,
+        rollNumber: student.rollNumber,
+        batchName: batchName,
+        academyName: academy?.name ?? 'School Management System',
+        academyPhone: academy?.phone,
+        academyAddress: academy?.address,
+      ),
+    );
   }
 
   Future<void> _previewAllVouchers(List<FeeVoucher> vouchers) async {
@@ -314,7 +253,7 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
         studentNames: studentNamesMap,
         studentRolls: studentRollsMap,
         batchName: batchName,
-        academyName: academy?.name ?? 'ClassKhata Academy',
+        academyName: academy?.name ?? 'School Management System',
         academyPhone: academy?.phone,
         academyAddress: academy?.address,
       ),
@@ -428,7 +367,7 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
                               children: [
                                 IconButton(
                                   icon: const Icon(Icons.print_outlined, size: 18, color: AppColors.accent),
-                                  tooltip: 'Preview & Print 3-Copy Voucher',
+                                  tooltip: 'Preview & Print 2-Copy Voucher (School & Student)',
                                   onPressed: () => _previewVoucher(v),
                                 ),
                                 IconButton(
@@ -474,9 +413,27 @@ class _FeesPageState extends ConsumerState<FeesPage> with SingleTickerProviderSt
                   'Defaulter Aging Report (30 / 60 / 90 Days)',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.refresh, size: 20),
-                  onPressed: () => ref.invalidate(defaulterAgingProvider),
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.campaign, size: 15),
+                      label: const Text('Send 10th Dues Reminders', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.warning,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      onPressed: () => showDialog(
+                        context: context,
+                        builder: (_) => const FeeDuesBroadcastDialog(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.refresh, size: 20),
+                      onPressed: () => ref.invalidate(defaulterAgingProvider),
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -39,6 +39,14 @@ final getAcademicDataUseCaseProvider = Provider<GetAcademicDataUseCase>((ref) {
   return GetAcademicDataUseCase(ref.watch(academicRepositoryProvider));
 });
 
+final deleteBatchUseCaseProvider = Provider<DeleteBatchUseCase>((ref) {
+  return DeleteBatchUseCase(ref.watch(academicRepositoryProvider));
+});
+
+final deleteCourseUseCaseProvider = Provider<DeleteCourseUseCase>((ref) {
+  return DeleteCourseUseCase(ref.watch(academicRepositoryProvider));
+});
+
 /// Future provider to fetch sessions, courses, and batches.
 final academicDataProvider = FutureProvider<({
   List<AcademicSession> sessions,

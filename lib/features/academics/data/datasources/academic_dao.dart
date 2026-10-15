@@ -66,8 +66,19 @@ class AcademicDao {
   Future<int> insertBatch(BatchesTableCompanion companion) =>
       _db.into(_db.batchesTable).insert(companion);
 
-  Future<void> updateBatchStatus(int batchId, bool isActive) =>
+  Future<int> updateBatchStatus(int batchId, bool isActive) =>
       (_db.update(_db.batchesTable)..where((t) => t.id.equals(batchId))).write(
         BatchesTableCompanion(isActive: Value(isActive)),
       );
+
+  Future<int> getStudentCountInBatch(int batchId) async {
+    final students = await (_db.select(_db.studentsTable)..where((t) => t.batchId.equals(batchId))).get();
+    return students.length;
+  }
+
+  Future<int> deleteBatch(int batchId) =>
+      (_db.delete(_db.batchesTable)..where((t) => t.id.equals(batchId))).go();
+
+  Future<int> deleteCourse(int courseId) =>
+      (_db.delete(_db.coursesTable)..where((t) => t.id.equals(courseId))).go();
 }

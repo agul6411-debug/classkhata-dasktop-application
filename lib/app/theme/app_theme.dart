@@ -42,6 +42,11 @@ class AppColors {
   static const Color partial = Color(0xFF0284C7); // Sky Blue 600
   static const Color partialBg = Color(0xFFE0F2FE); // Sky 100
 
+  // Semantic aliases
+  static const Color success = paid;
+  static const Color warning = pending;
+  static const Color error = overdue;
+
   // Dark theme colors (Clean Slate Dark)
   static const Color darkBackground = Color(0xFF0B1120); // Deepest slate navy
   static const Color darkSurface = Color(0xFF1E293B); // Elevated slate navy card

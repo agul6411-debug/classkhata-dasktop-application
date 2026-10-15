@@ -30,6 +30,8 @@ class PdfDocumentService {
     required String academyName,
     String? academyPhone,
     String? academyAddress,
+    FeeVoucher? voucher,
+    String? guardianName,
     PdfPageFormat format = PdfPageFormat.roll80,
   }) async {
     final doc = pw.Document();
@@ -90,6 +92,18 @@ class PdfDocumentService {
                   _thermalRow('Class/Batch:', batchName),
                 if (paymentMode != null && paymentMode.isNotEmpty)
                   _thermalRow('Payment Mode:', PaymentModes.getPdfDisplayName(paymentMode)),
+                if (voucher != null) ...[
+                  pw.Divider(thickness: 0.5),
+                  pw.Text('CALCULATION (${voucher.monthYear}):',
+                      style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 2),
+                  _thermalRow('Tuition Fee:', voucher.baseAmount.format()),
+                  if (voucher.carryForward.paisa > 0) _thermalRow('Prev Arrears:', voucher.carryForward.format()),
+                  if (voucher.lateFee.paisa > 0) _thermalRow('Late Surcharge:', voucher.lateFee.format()),
+                  if (voucher.discount.paisa > 0) _thermalRow('Concession:', '- ${voucher.discount.format()}'),
+                  _thermalRow('Total Billed:', voucher.totalDue.format(), bold: true),
+                  _thermalRow('Balance Due:', voucher.balanceRemaining.format(), bold: true),
+                ],
                 pw.Divider(thickness: 0.8),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -129,7 +143,7 @@ class PdfDocumentService {
                 ),
                 pw.Center(
                   child: pw.Text(
-                    'ClassKhata Management System',
+                    academyName,
                     style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600),
                   ),
                 ),
@@ -305,7 +319,7 @@ class PdfDocumentService {
                             children: [
                               pw.Text('Official Digital Verification', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
                               pw.Text('Scan QR to verify authentic fee voucher entry', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
-                              pw.Text('ClassKhata Secure Audit Trail', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
+                              pw.Text('$academyName • Verified Audit Trail', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
                             ],
                           ),
                         ],
@@ -338,8 +352,9 @@ class PdfDocumentService {
   }
 
   // ---------------------------------------------------------------------------
-  // 2. Standard 3-Copy School Fee Voucher (A4 Landscape)
-  //    (Bank Copy, School Copy, Student Copy)
+  // ---------------------------------------------------------------------------
+  // 2. Standard 2-Copy School Fee Voucher (A4 Landscape)
+  //    (School Copy & Student Copy - Direct Counter Payment, No Bank)
   // ---------------------------------------------------------------------------
 
   static Future<Uint8List> generateFeeVoucherPdf({
@@ -350,9 +365,9 @@ class PdfDocumentService {
     required String academyName,
     String? academyPhone,
     String? academyAddress,
-    String bankName = 'Allied Bank / Meezan Bank',
-    String accountTitle = 'ClassKhata Academy Fee Collection',
-    String accountNumber = '0123-45678901-01',
+    String? bankName,
+    String? accountTitle,
+    String? accountNumber,
     PdfPageFormat format = PdfPageFormat.a4,
   }) async {
     final doc = pw.Document();
@@ -360,46 +375,49 @@ class PdfDocumentService {
     doc.addPage(
       pw.Page(
         pageFormat: format.landscape,
-        margin: const pw.EdgeInsets.all(16),
+        margin: const pw.EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         build: (context) {
-          final copies = ['BANK COPY', 'SCHOOL COPY', 'STUDENT COPY'];
+          final copies = ['SCHOOL COPY', 'STUDENT COPY'];
 
           return pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
-              for (int i = 0; i < copies.length; i++) ...[
-                pw.Expanded(
-                  child: _buildVoucherCopy(
-                    copyTitle: copies[i],
-                    voucher: voucher,
-                    studentName: studentName,
-                    rollNumber: rollNumber,
-                    batchName: batchName,
-                    academyName: academyName,
-                    academyPhone: academyPhone,
-                    academyAddress: academyAddress,
-                    bankName: bankName,
-                    accountTitle: accountTitle,
-                    accountNumber: accountNumber,
+              pw.Expanded(
+                child: _buildVoucherCopy(
+                  copyTitle: copies[0],
+                  voucher: voucher,
+                  studentName: studentName,
+                  rollNumber: rollNumber,
+                  batchName: batchName,
+                  academyName: academyName,
+                  academyPhone: academyPhone,
+                  academyAddress: academyAddress,
+                ),
+              ),
+              // Perforation / Cut line in the center
+              pw.Container(
+                margin: const pw.EdgeInsets.symmetric(horizontal: 6),
+                width: 1,
+                child: pw.Column(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: List.generate(
+                    26,
+                    (_) => pw.Container(width: 1, height: 8, color: PdfColors.grey400),
                   ),
                 ),
-                if (i < copies.length - 1)
-                  pw.Container(
-                    margin: const pw.EdgeInsets.symmetric(horizontal: 6),
-                    width: 1,
-                    child: pw.LayoutBuilder(
-                      builder: (ctx, constraints) {
-                        return pw.Column(
-                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                          children: List.generate(
-                            25,
-                            (_) => pw.Container(width: 1, height: 8, color: PdfColors.grey400),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-              ],
+              ),
+              pw.Expanded(
+                child: _buildVoucherCopy(
+                  copyTitle: copies[1],
+                  voucher: voucher,
+                  studentName: studentName,
+                  rollNumber: rollNumber,
+                  batchName: batchName,
+                  academyName: academyName,
+                  academyPhone: academyPhone,
+                  academyAddress: academyAddress,
+                ),
+              ),
             ],
           );
         },
@@ -409,7 +427,7 @@ class PdfDocumentService {
     return doc.save();
   }
 
-  /// Bulk Vouchers Generator (Each page has one student's 3-copy voucher)
+  /// Bulk Vouchers Generator (Each page has one student's 2-copy voucher: School Copy & Student Copy)
   static Future<Uint8List> generateBatchVouchersPdf({
     required List<FeeVoucher> vouchers,
     required Map<int, String> studentNames,
@@ -418,12 +436,12 @@ class PdfDocumentService {
     required String academyName,
     String? academyPhone,
     String? academyAddress,
-    String bankName = 'Allied Bank / Meezan Bank',
-    String accountTitle = 'ClassKhata Academy Fee Collection',
-    String accountNumber = '0123-45678901-01',
+    String? bankName,
+    String? accountTitle,
+    String? accountNumber,
   }) async {
     final doc = pw.Document();
-    final copies = ['BANK COPY', 'SCHOOL COPY', 'STUDENT COPY'];
+    final copies = ['SCHOOL COPY', 'STUDENT COPY'];
 
     for (final voucher in vouchers) {
       final studentName = studentNames[voucher.studentId] ?? 'Student #${voucher.studentId}';
@@ -432,44 +450,46 @@ class PdfDocumentService {
       doc.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4.landscape,
-          margin: const pw.EdgeInsets.all(16),
+          margin: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           build: (context) {
             return pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.stretch,
               children: [
-                for (int i = 0; i < copies.length; i++) ...[
-                  pw.Expanded(
-                    child: _buildVoucherCopy(
-                      copyTitle: copies[i],
-                      voucher: voucher,
-                      studentName: studentName,
-                      rollNumber: rollNumber,
-                      batchName: batchName,
-                      academyName: academyName,
-                      academyPhone: academyPhone,
-                      academyAddress: academyAddress,
-                      bankName: bankName,
-                      accountTitle: accountTitle,
-                      accountNumber: accountNumber,
+                pw.Expanded(
+                  child: _buildVoucherCopy(
+                    copyTitle: copies[0],
+                    voucher: voucher,
+                    studentName: studentName,
+                    rollNumber: rollNumber,
+                    batchName: batchName,
+                    academyName: academyName,
+                    academyPhone: academyPhone,
+                    academyAddress: academyAddress,
+                  ),
+                ),
+                pw.Container(
+                  margin: const pw.EdgeInsets.symmetric(horizontal: 6),
+                  width: 1,
+                  child: pw.Column(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: List.generate(
+                      26,
+                      (_) => pw.Container(width: 1, height: 8, color: PdfColors.grey400),
                     ),
                   ),
-                  if (i < copies.length - 1)
-                    pw.Container(
-                      margin: const pw.EdgeInsets.symmetric(horizontal: 6),
-                      width: 1,
-                      child: pw.LayoutBuilder(
-                        builder: (ctx, constraints) {
-                          return pw.Column(
-                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                            children: List.generate(
-                              25,
-                              (_) => pw.Container(width: 1, height: 8, color: PdfColors.grey400),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                ],
+                ),
+                pw.Expanded(
+                  child: _buildVoucherCopy(
+                    copyTitle: copies[1],
+                    voucher: voucher,
+                    studentName: studentName,
+                    rollNumber: rollNumber,
+                    batchName: batchName,
+                    academyName: academyName,
+                    academyPhone: academyPhone,
+                    academyAddress: academyAddress,
+                  ),
+                ),
               ],
             );
           },
@@ -489,207 +509,318 @@ class PdfDocumentService {
     required String academyName,
     String? academyPhone,
     String? academyAddress,
-    required String bankName,
-    required String accountTitle,
-    required String accountNumber,
   }) {
-    final totalAfterDue = voucher.totalDue + voucher.lateFee;
+    final lateFeeSurcharge = voucher.lateFee.isZero ? Money.fromRupees(200) : voucher.lateFee;
+    final totalAfterDue = voucher.totalDue + lateFeeSurcharge;
 
     return pw.Container(
-      padding: const pw.EdgeInsets.all(8),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey600, width: 0.8),
+        border: pw.Border.all(color: PdfColors.blueGrey800, width: 0.8),
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         children: [
-          // Header
+          // 1. Header: School Name & Subtitle
           pw.Center(
             child: pw.Text(
               academyName,
-              style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900),
+              style: pw.TextStyle(fontSize: 11.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900),
               textAlign: pw.TextAlign.center,
+              maxLines: 1,
             ),
           ),
-          if (academyAddress != null && academyAddress.isNotEmpty)
+          if ((academyAddress != null && academyAddress.isNotEmpty) || (academyPhone != null && academyPhone.isNotEmpty))
             pw.Center(
               child: pw.Text(
-                academyAddress,
+                [
+                  if (academyAddress != null && academyAddress.isNotEmpty) academyAddress,
+                  if (academyPhone != null && academyPhone.isNotEmpty) 'Tel: $academyPhone',
+                ].join(' • '),
                 style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey700),
                 textAlign: pw.TextAlign.center,
+                maxLines: 1,
               ),
             ),
-          pw.SizedBox(height: 2),
-          pw.Container(
-            padding: const pw.EdgeInsets.symmetric(vertical: 2),
-            color: PdfColors.grey300,
-            child: pw.Center(
-              child: pw.Text(
-                copyTitle,
-                style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
-              ),
-            ),
-          ),
-          pw.SizedBox(height: 4),
+          pw.SizedBox(height: 3),
 
-          // Bank Details Box
+          // 2. Banner: Copy Title (SCHOOL COPY / STUDENT COPY)
           pw.Container(
-            padding: const pw.EdgeInsets.all(3),
+            padding: const pw.EdgeInsets.symmetric(vertical: 2.5, horizontal: 8),
             decoration: pw.BoxDecoration(
-              color: PdfColors.grey100,
-              border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+              color: copyTitle.contains('SCHOOL') ? PdfColors.blueGrey800 : PdfColors.teal800,
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
             ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Bank: $bankName', style: const pw.TextStyle(fontSize: 6.5)),
-                pw.Text('A/C Title: $accountTitle', style: const pw.TextStyle(fontSize: 6.5)),
-                pw.Text('A/C No: $accountNumber', style: pw.TextStyle(fontSize: 6.5, fontWeight: pw.FontWeight.bold)),
+                pw.Text(
+                  copyTitle,
+                  style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                ),
+                pw.Text(
+                  'FEE CHALLAN / VOUCHER',
+                  style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.grey200),
+                ),
               ],
             ),
           ),
           pw.SizedBox(height: 4),
 
-          // Voucher Meta
-          _miniMetaRow('Voucher No:', voucher.voucherNumber, bold: true),
-          _miniMetaRow('Month:', voucher.monthYear),
-          _miniMetaRow('Issue Date:', '${voucher.issueDate.day}/${voucher.issueDate.month}/${voucher.issueDate.year}'),
-          _miniMetaRow('Due Date:', '${voucher.dueDate.day}/${voucher.dueDate.month}/${voucher.dueDate.year}', bold: true),
-          pw.Divider(thickness: 0.5, color: PdfColors.grey400),
+          // 3. Voucher Meta & Student Information Box (Compact Grid)
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey100,
+              border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+            ),
+            child: pw.Column(
+              children: [
+                pw.Row(
+                  children: [
+                    pw.Expanded(
+                      flex: 5,
+                      child: _miniMetaRow('Voucher No:', voucher.voucherNumber, bold: true),
+                    ),
+                    pw.SizedBox(width: 8),
+                    pw.Expanded(
+                      flex: 4,
+                      child: _miniMetaRow('Fee Month:', voucher.monthYear, bold: true),
+                    ),
+                  ],
+                ),
+                pw.Row(
+                  children: [
+                    pw.Expanded(
+                      flex: 5,
+                      child: _miniMetaRow('Issue Date:', '${voucher.issueDate.day.toString().padLeft(2, '0')}/${voucher.issueDate.month.toString().padLeft(2, '0')}/${voucher.issueDate.year}'),
+                    ),
+                    pw.SizedBox(width: 8),
+                    pw.Expanded(
+                      flex: 4,
+                      child: _miniMetaRow('Due Date:', '${voucher.dueDate.day.toString().padLeft(2, '0')}/${voucher.dueDate.month.toString().padLeft(2, '0')}/${voucher.dueDate.year}', bold: true),
+                    ),
+                  ],
+                ),
+                pw.Divider(thickness: 0.4, color: PdfColors.grey400, height: 4),
+                pw.Row(
+                  children: [
+                    pw.Expanded(
+                      flex: 5,
+                      child: _miniMetaRow('Student Name:', studentName, bold: true),
+                    ),
+                    pw.SizedBox(width: 8),
+                    pw.Expanded(
+                      flex: 4,
+                      child: _miniMetaRow('Roll No:', rollNumber != null && rollNumber.isNotEmpty ? rollNumber : '-'),
+                    ),
+                  ],
+                ),
+                pw.Row(
+                  children: [
+                    pw.Expanded(
+                      child: _miniMetaRow('Class / Section:', batchName),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 4),
 
-          // Student Details
-          _miniMetaRow('Student:', studentName, bold: true),
-          if (rollNumber != null && rollNumber.isNotEmpty)
-            _miniMetaRow('Roll No:', rollNumber),
-          _miniMetaRow('Class/Batch:', batchName),
-          pw.Divider(thickness: 0.5, color: PdfColors.grey400),
-
-          // Fee Particulars Table
+          // 4. Particulars Table (All dues to submit)
           pw.Table(
             border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
             children: [
               pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                decoration: const pw.BoxDecoration(color: PdfColors.grey300),
                 children: [
                   pw.Padding(
-                    padding: const pw.EdgeInsets.all(2),
-                    child: pw.Text('Particulars', style: pw.TextStyle(fontSize: 6.5, fontWeight: pw.FontWeight.bold)),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+                    child: pw.Text('Particulars / Head', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
                   ),
                   pw.Padding(
-                    padding: const pw.EdgeInsets.all(2),
-                    child: pw.Text('Amount', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 6.5, fontWeight: pw.FontWeight.bold)),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+                    child: pw.Text('Amount (PKR)', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
                   ),
                 ],
               ),
+              // Base Monthly Tuition Fee
               pw.TableRow(
                 children: [
                   pw.Padding(
-                    padding: const pw.EdgeInsets.all(2),
-                    child: pw.Text('Tuition Fee', style: const pw.TextStyle(fontSize: 6.5)),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    child: pw.Text('Monthly Tuition Fee', style: const pw.TextStyle(fontSize: 6.5)),
                   ),
                   pw.Padding(
-                    padding: const pw.EdgeInsets.all(2),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                     child: pw.Text(voucher.baseAmount.format(), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 6.5)),
                   ),
                 ],
               ),
+              // Previous Arrears
               if (!voucher.carryForward.isZero)
                 pw.TableRow(
                   children: [
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(2),
-                      child: pw.Text('Previous Arrears', style: const pw.TextStyle(fontSize: 6.5)),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      child: pw.Text('Previous Unpaid Arrears', style: pw.TextStyle(fontSize: 6.5, color: PdfColors.red900, fontWeight: pw.FontWeight.bold)),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(2),
-                      child: pw.Text(voucher.carryForward.format(), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 6.5)),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      child: pw.Text(voucher.carryForward.format(), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.red900, fontWeight: pw.FontWeight.bold)),
                     ),
                   ],
                 ),
+              // Concession / Discount
               if (!voucher.discount.isZero)
                 pw.TableRow(
                   children: [
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(2),
-                      child: pw.Text('Concession/Discount', style: const pw.TextStyle(fontSize: 6.5)),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      child: pw.Text('Concession / Discount', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.green900)),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(2),
-                      child: pw.Text('- ${voucher.discount.format()}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 6.5)),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      child: pw.Text('- ${voucher.discount.format()}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.green900)),
                     ),
                   ],
                 ),
-              pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.grey100),
-                children: [
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(2),
-                    child: pw.Text('Payable by Due Date', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(2),
-                    child: pw.Text(voucher.totalDue.format(), textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
-                  ),
-                ],
-              ),
-              pw.TableRow(
-                children: [
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(2),
-                    child: pw.Text('Late Fee Surcharge', style: const pw.TextStyle(fontSize: 6.5)),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(2),
-                    child: pw.Text(voucher.lateFee.isZero ? 'Rs. 200' : voucher.lateFee.format(), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 6.5)),
-                  ),
-                ],
-              ),
+              // Payable by Due Date
               pw.TableRow(
                 decoration: const pw.BoxDecoration(color: PdfColors.grey200),
                 children: [
                   pw.Padding(
-                    padding: const pw.EdgeInsets.all(2),
-                    child: pw.Text('Payable after Due Date', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+                    child: pw.Text('TOTAL PAYABLE BY DUE DATE', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900)),
                   ),
                   pw.Padding(
-                    padding: const pw.EdgeInsets.all(2),
-                    child: pw.Text(
-                      voucher.lateFee.isZero ? (voucher.totalDue + Money.fromRupees(200)).format() : totalAfterDue.format(),
-                      textAlign: pw.TextAlign.right,
-                      style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
-                    ),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+                    child: pw.Text(voucher.totalDue.format(), textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900)),
                   ),
                 ],
               ),
+              // Late Fee Fine / Surcharge
+              pw.TableRow(
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    child: pw.Text('Late Fee Surcharge (After Due Date)', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.red800)),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    child: pw.Text(lateFeeSurcharge.format(), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.red800)),
+                  ),
+                ],
+              ),
+              // Payable after Due Date
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+                    child: pw.Text('TOTAL PAYABLE AFTER DUE DATE', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+                    child: pw.Text(totalAfterDue.format(), textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
+                  ),
+                ],
+              ),
+              // If already paid some amount
+              if (voucher.amountPaid.paisa > 0) ...[
+                pw.TableRow(
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      child: pw.Text('Amount Received / Paid', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.green900)),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      child: pw.Text(voucher.amountPaid.format(), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.green900)),
+                    ),
+                  ],
+                ),
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+                      child: pw.Text('NET REMAINING BALANCE TO PAY', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+                      child: pw.Text(voucher.balanceRemaining.format(), textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
           pw.Spacer(),
 
-          // Barcode & Instructions
-          pw.Center(
-            child: pw.BarcodeWidget(
-              data: voucher.voucherNumber,
-              barcode: pw.Barcode.code128(),
-              width: 100,
-              height: 22,
-              drawText: false,
+          // 5. Instruction Note
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey100,
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+              border: pw.Border.all(color: PdfColors.grey300, width: 0.4),
             ),
-          ),
-          pw.Center(
             child: pw.Text(
-              voucher.voucherNumber,
+              'Notice: Please deposit fee dues at the School Accounts Counter on or before the 10th of every month. Keep the Student Copy safely.',
               style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey700),
             ),
           ),
           pw.SizedBox(height: 4),
 
-          // Signatures
+          // 6. Barcode & Signatures
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
-              pw.Text('Depositor Sign', style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey700)),
-              pw.Text('Bank Teller / Cashier', style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey700)),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.BarcodeWidget(
+                    data: voucher.voucherNumber,
+                    barcode: pw.Barcode.code128(),
+                    width: 90,
+                    height: 16,
+                    drawText: false,
+                  ),
+                  pw.SizedBox(height: 1),
+                  pw.Text(voucher.voucherNumber, style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey700)),
+                  pw.SizedBox(height: 4),
+                  pw.Container(
+                    width: 100,
+                    decoration: const pw.BoxDecoration(
+                      border: pw.Border(top: pw.BorderSide(color: PdfColors.grey600, width: 0.6)),
+                    ),
+                    padding: const pw.EdgeInsets.only(top: 1.5),
+                    child: pw.Center(
+                      child: pw.Text('Parent / Depositor Sign', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey700)),
+                    ),
+                  ),
+                ],
+              ),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  pw.Container(
+                    width: 120,
+                    decoration: const pw.BoxDecoration(
+                      border: pw.Border(top: pw.BorderSide(color: PdfColors.grey600, width: 0.6)),
+                    ),
+                    padding: const pw.EdgeInsets.only(top: 1.5),
+                    child: pw.Center(
+                      child: pw.Text('School Accounts / Cashier Stamp', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey700)),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ],
@@ -888,7 +1019,7 @@ class PdfDocumentService {
                 pw.SizedBox(height: 10),
                 pw.Center(
                   child: pw.Text(
-                    'This is a computer generated salary slip generated by ClassKhata.',
+                    'This is an official computer generated salary slip from $academyName.',
                     style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600),
                   ),
                 ),
@@ -1162,14 +1293,18 @@ class PdfDocumentService {
 
   static pw.Widget _miniMetaRow(String label, String value, {bool bold = false}) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 1),
+      padding: const pw.EdgeInsets.symmetric(vertical: 0.8),
       child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(label, style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey700)),
-          pw.Text(
-            value,
-            style: pw.TextStyle(fontSize: 6.5, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal),
+          pw.SizedBox(width: 4),
+          pw.Expanded(
+            child: pw.Text(
+              value,
+              textAlign: pw.TextAlign.right,
+              maxLines: 1,
+              style: pw.TextStyle(fontSize: 6.5, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal),
+            ),
           ),
         ],
       ),

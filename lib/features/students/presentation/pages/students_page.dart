@@ -2,7 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' hide Family;
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/money/money.dart';
 import '../../../../shared/widgets/app_text_field.dart';
@@ -18,6 +18,7 @@ import '../widgets/student_fee_card_dialog.dart';
 import '../widgets/student_form_dialog.dart';
 import '../widgets/student_id_card_dialog.dart';
 import '../widgets/student_import_dialog.dart';
+import '../widgets/add_family_dialog.dart';
 
 class StudentsPage extends ConsumerStatefulWidget {
   const StudentsPage({super.key});
@@ -252,7 +253,23 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                       return DataRow(
                         cells: [
                           DataCell(Text(student.rollNumber, style: const TextStyle(fontWeight: FontWeight.bold))),
-                          DataCell(Text(student.name)),
+                          DataCell(
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircleAvatar(
+                                  radius: 14,
+                                  backgroundColor: AppColors.accent.withOpacity(0.15),
+                                  child: Text(
+                                    student.name.isNotEmpty ? student.name[0].toUpperCase() : 'S',
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.accent),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(student.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ),
                           DataCell(Text(student.guardianPhone)),
                           DataCell(Text(sectionDisplay)),
                           DataCell(
@@ -268,8 +285,18 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
+                                  tooltip: 'Edit Student Profile',
+                                  icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF2563EB)),
+                                  splashRadius: 16,
+                                  onPressed: () => showDialog(
+                                    context: context,
+                                    builder: (_) => StudentFormDialog(studentToEdit: student),
+                                  ),
+                                ),
+                                IconButton(
                                   tooltip: 'Print ID Card',
                                   icon: const Icon(Icons.badge_outlined, size: 18, color: AppColors.accent),
+                                  splashRadius: 16,
                                   onPressed: () => showDialog(
                                     context: context,
                                     builder: (_) => StudentIdCardDialog(
@@ -281,6 +308,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                                 IconButton(
                                   tooltip: 'Fee Reminder Card',
                                   icon: const Icon(Icons.credit_card, size: 18, color: AppColors.heading),
+                                  splashRadius: 16,
                                   onPressed: () => showDialog(
                                     context: context,
                                     builder: (_) => StudentFeeCardDialog(
@@ -290,6 +318,47 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                                       dueDay: batch?.dueDay ?? 10,
                                     ),
                                   ),
+                                ),
+                                IconButton(
+                                  tooltip: 'Delete Student',
+                                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                  splashRadius: 16,
+                                  onPressed: () async {
+                                    final confirmed = await showDialog<bool>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: const Text('Delete Student?'),
+                                        content: Text('Are you sure you want to delete ${student.name} (${student.rollNumber})? This will remove the student record.'),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                                            onPressed: () => Navigator.of(ctx).pop(true),
+                                            child: const Text('Delete'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirmed == true && context.mounted) {
+                                      final repo = ref.read(studentRepositoryProvider);
+                                      final res = await repo.deleteStudent(student.id);
+                                      if (!context.mounted) return;
+                                      res.fold(
+                                        onSuccess: (_) {
+                                          ref.read(studentListVersionProvider.notifier).state++;
+                                          ref.invalidate(studentsListProvider);
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Student deleted successfully.'), backgroundColor: Color(0xFF16A34A)),
+                                          );
+                                        },
+                                        onFailure: (f) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text(f.message), backgroundColor: Colors.red),
+                                          );
+                                        },
+                                      );
+                                    }
+                                  },
                                 ),
                               ],
                             ),
@@ -678,17 +747,63 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                                                     ),
                                                     Text('Due: Day ${b.dueDay}', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
                                                     const SizedBox(height: 4),
-                                                    OutlinedButton.icon(
-                                                      style: OutlinedButton.styleFrom(
-                                                        visualDensity: VisualDensity.compact,
-                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                      ),
-                                                      icon: const Icon(Icons.person_add, size: 13),
-                                                      label: const Text('Enroll', style: TextStyle(fontSize: 11)),
-                                                      onPressed: () => showDialog(
-                                                        context: context,
-                                                        builder: (_) => StudentFormDialog(initialBatchId: b.id),
-                                                      ),
+                                                    Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        OutlinedButton.icon(
+                                                          style: OutlinedButton.styleFrom(
+                                                            visualDensity: VisualDensity.compact,
+                                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                          ),
+                                                          icon: const Icon(Icons.person_add, size: 13),
+                                                          label: const Text('Enroll', style: TextStyle(fontSize: 11)),
+                                                          onPressed: () => showDialog(
+                                                            context: context,
+                                                            builder: (_) => StudentFormDialog(initialBatchId: b.id),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 4),
+                                                        IconButton(
+                                                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                                          tooltip: 'Delete Section',
+                                                          splashRadius: 16,
+                                                          onPressed: () async {
+                                                            final confirmed = await showDialog<bool>(
+                                                              context: context,
+                                                              builder: (ctx) => AlertDialog(
+                                                                title: const Text('Delete Section?'),
+                                                                content: Text('Are you sure you want to delete "${b.name}"?'),
+                                                                actions: [
+                                                                  TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+                                                                  ElevatedButton(
+                                                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                                                                    onPressed: () => Navigator.of(ctx).pop(true),
+                                                                    child: const Text('Delete'),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            );
+                                                            if (confirmed == true && context.mounted) {
+                                                              final useCase = ref.read(deleteBatchUseCaseProvider);
+                                                              final res = await useCase(b.id);
+                                                              if (!context.mounted) return;
+                                                              res.fold(
+                                                                onSuccess: (_) {
+                                                                  ref.invalidate(academicDataProvider);
+                                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                                    const SnackBar(content: Text('Section deleted.'), backgroundColor: Color(0xFF16A34A)),
+                                                                  );
+                                                                },
+                                                                onFailure: (f) {
+                                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                                    SnackBar(content: Text(f.message), backgroundColor: Colors.red),
+                                                                  );
+                                                                },
+                                                              );
+                                                            }
+                                                          },
+                                                        ),
+                                                      ],
                                                     ),
                                                   ],
                                                 ),
@@ -829,7 +944,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
         ),
         const SizedBox(width: 16),
 
-        // Families
+        // Families / Siblings
         Expanded(
           flex: 2,
           child: Card(
@@ -838,30 +953,60 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text('Family / Sibling Groups', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Linked families for unified sibling accounting.',
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Family / Sibling Groups', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          SizedBox(height: 2),
+                          Text(
+                            'Linked families for unified sibling accounting.',
+                            style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.group_add, size: 16),
+                        label: const Text('Add Family'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        onPressed: () => showDialog(
+                          context: context,
+                          builder: (_) => const AddFamilyDialog(),
+                        ),
+                      ),
+                    ],
                   ),
                   const Divider(height: 20),
                   Expanded(
                     child: familiesAsync.when(
                       data: (families) => families.isEmpty
-                          ? const Center(child: Text('No families linked yet.'))
-                          : ListView.separated(
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.family_restroom, size: 48, color: Colors.grey.shade400),
+                                  const SizedBox(height: 12),
+                                  const Text('No families linked yet.', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Click "Add Family" above to register a guardian and link siblings.',
+                                    style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
                               itemCount: families.length,
-                              separatorBuilder: (_, __) => const Divider(),
                               itemBuilder: (context, idx) {
                                 final f = families[idx];
-                                return ListTile(
-                                  leading: const CircleAvatar(
-                                    backgroundColor: AppColors.accent,
-                                    child: Icon(Icons.group, color: Colors.white, size: 18),
-                                  ),
-                                  title: Text(f.guardianName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  subtitle: Text('${f.familyCode} • ${f.guardianPhone}'),
-                                );
+                                return _FamilyCardItem(family: f);
                               },
                             ),
                       loading: () => const Center(child: CircularProgressIndicator()),
@@ -877,3 +1022,198 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
     );
   }
 }
+
+class _FamilyCardItem extends ConsumerWidget {
+  const _FamilyCardItem({
+    required this.family,
+  });
+
+  final Family family;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final siblingsAsync = ref.watch(familyStudentsProvider(family.id));
+    final acadData = ref.watch(academicDataProvider).valueOrNull;
+    final batchesMap = acadData != null
+        ? {for (final b in acadData.batches) b.id: b}
+        : <int, Batch>{};
+    final coursesMap = acadData != null
+        ? {for (final c in acadData.courses) c.id: c}
+        : <int, Course>{};
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: isDark ? AppColors.darkBorder : Colors.grey.shade300),
+      ),
+      color: isDark ? AppColors.darkSurface : Colors.grey.shade50,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header Row: Avatar, Guardian Name, Family Code, + Add Sibling
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: AppColors.accent.withValues(alpha: 0.15),
+                  child: const Icon(Icons.family_restroom, color: AppColors.accent, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            family.guardianName,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              family.familyCode,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.accent,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Icon(Icons.phone, size: 12, color: AppColors.textMuted),
+                          const SizedBox(width: 4),
+                          Text(
+                            family.guardianPhone,
+                            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                          ),
+                          if (family.address != null && family.address!.isNotEmpty) ...[
+                            const SizedBox(width: 12),
+                            const Icon(Icons.location_on, size: 12, color: AppColors.textMuted),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                family.address!,
+                                style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.person_add_alt_1, size: 14),
+                  label: const Text('Add Sibling', style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () => showDialog(
+                    context: context,
+                    builder: (_) => StudentFormDialog(initialFamilyId: family.id),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+
+            // Sibling Students List
+            siblingsAsync.when(
+              data: (siblings) {
+                if (siblings.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 15, color: AppColors.textMuted),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'No siblings registered in this family yet. Click "Add Sibling" to enroll a child.',
+                            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: siblings.map((sibling) {
+                    final batch = batchesMap[sibling.batchId];
+                    final course = batch != null ? coursesMap[batch.courseId] : null;
+                    final sectionName = course != null
+                        ? '${course.name} (${batch?.name ?? ""})'
+                        : (batch?.name ?? 'Section #${sibling.batchId}');
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.darkBackground : Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: isDark ? AppColors.darkBorder : Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 13,
+                            backgroundColor: AppColors.accent.withValues(alpha: 0.1),
+                            child: Text(
+                              sibling.name.isNotEmpty ? sibling.name[0].toUpperCase() : 'S',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.accent),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  sibling.name,
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                ),
+                                Text(
+                                  'Roll: ${sibling.rollNumber} • Class: $sectionName',
+                                  style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                ),
+                              ],
+                            ),
+                          ),
+                          StatusBadge(
+                            type: sibling.status == StudentStatus.active ? StatusBadgeType.active : StatusBadgeType.inactive,
+                            label: sibling.status.name.toUpperCase(),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+              loading: () => const LinearProgressIndicator(),
+              error: (e, _) => Text('Error loading siblings: $e', style: const TextStyle(fontSize: 12, color: AppColors.error)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

@@ -200,6 +200,70 @@ class StudentRepositoryImpl implements StudentRepository {
     }
   }
 
+  @override
+  Future<Result<void>> updateStudent({
+    required int id,
+    required String name,
+    required int batchId,
+    required String guardianPhone,
+    String? phone,
+    String? email,
+    String? rollNumber,
+    int? familyId,
+  }) async {
+    try {
+      await _dao.updateStudent(
+        id,
+        StudentsTableCompanion(
+          name: Value(name),
+          batchId: Value(batchId),
+          guardianPhone: Value(guardianPhone),
+          phone: Value(phone),
+          email: Value(email),
+          rollNumber: rollNumber != null ? Value(rollNumber) : const Value.absent(),
+          familyId: Value(familyId),
+        ),
+      );
+      return const Success(null);
+    } catch (e, st) {
+      await AppLogger.instance.error('updateStudent error', error: e, stack: st);
+      return Failure(DatabaseFailure('Could not update student.', technicalDetail: e.toString()));
+    }
+  }
+
+  @override
+  Future<Result<void>> deleteStudent(int id) async {
+    try {
+      await _dao.deleteStudent(id);
+      return const Success(null);
+    } catch (e, st) {
+      await AppLogger.instance.error('deleteStudent error', error: e, stack: st);
+      return Failure(DatabaseFailure('Could not delete student.', technicalDetail: e.toString()));
+    }
+  }
+
+  @override
+  Future<Result<List<Student>>> getStudentsByGuardianPhone(String phone) async {
+    try {
+      final rows = await _dao.getStudentsByGuardianPhone(phone);
+      return Success(rows.map(_mapStudentRow).toList());
+    } catch (e, st) {
+      await AppLogger.instance.error('getStudentsByGuardianPhone error', error: e, stack: st);
+      return Failure(DatabaseFailure('Could not fetch students by phone.', technicalDetail: e.toString()));
+    }
+  }
+
+  @override
+  Future<Result<List<Student>>> getStudentsByFamilyId(int familyId) async {
+    try {
+      final rows = await _dao.getStudentsByFamilyId(familyId);
+      return Success(rows.map(_mapStudentRow).toList());
+    } catch (e, st) {
+      await AppLogger.instance.error('getStudentsByFamilyId error', error: e, stack: st);
+      return Failure(DatabaseFailure('Could not fetch family students.', technicalDetail: e.toString()));
+    }
+  }
+
   Student _mapStudentRow(StudentsTableData r) {
     return Student(
       id: r.id,
