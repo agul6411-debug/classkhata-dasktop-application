@@ -6,7 +6,9 @@ import 'package:equatable/equatable.dart';
 enum ReportType {
   feeCollectionSummary,
   defaultersAging,
+  expenseSummary,
   cashBookStatement,
+  dayClosingSummary,
   profitLossSummary,
   payrollRegister,
   inventoryValuation,
@@ -19,8 +21,10 @@ enum ReportType {
 
   String get displayName => switch (this) {
         ReportType.feeCollectionSummary => 'Fee Collection Summary',
-        ReportType.defaultersAging => 'Defaulters Aging Report (30/60/90 Days)',
+        ReportType.defaultersAging => 'Fee Defaulters Aging (30/60/90 Days)',
+        ReportType.expenseSummary => 'Operational Expenses Summary',
         ReportType.cashBookStatement => 'Cash Book & Transactions',
+        ReportType.dayClosingSummary => 'Day Closing & Drawer Reconciliation',
         ReportType.profitLossSummary => 'Profit & Loss Statement',
         ReportType.payrollRegister => 'Monthly Payroll Register',
         ReportType.inventoryValuation => 'Inventory Stock & Asset Valuation',
@@ -35,7 +39,9 @@ enum ReportType {
   String get description => switch (this) {
         ReportType.feeCollectionSummary => 'Aggregated collections by date, batch, and payment mode.',
         ReportType.defaultersAging => 'Unpaid fee vouchers bucketed by 30, 60, and 90+ days overdue.',
+        ReportType.expenseSummary => 'Chronological log of operational expenses categorized by department/type.',
         ReportType.cashBookStatement => 'Chronological inflows and outflows with closing balances.',
+        ReportType.dayClosingSummary => 'Daily cash drawer closings, receipts, expenses, and discrepancies.',
         ReportType.profitLossSummary => 'Total fee income vs operational expenses with profit margins.',
         ReportType.payrollRegister => 'Staff salary disbursements, allowances, deductions, and advances.',
         ReportType.inventoryValuation => 'On-hand quantities, reorder levels, unit costs, and total values.',
@@ -45,6 +51,27 @@ enum ReportType {
         ReportType.batchWiseFees => 'Total invoiced, collected, and pending fee breakdown grouped by batch.',
         ReportType.courseWiseFees => 'Tuition generated, paid, and overdue metrics grouped by course.',
         ReportType.auditLog => 'Tamper-evident chronological audit chain with SHA-256 verification status.',
+      };
+
+  String get category => switch (this) {
+        ReportType.feeCollectionSummary ||
+        ReportType.expenseSummary ||
+        ReportType.cashBookStatement ||
+        ReportType.dayClosingSummary ||
+        ReportType.profitLossSummary => 'Financial & Accounts',
+
+        ReportType.defaultersAging ||
+        ReportType.batchWiseFees ||
+        ReportType.courseWiseFees ||
+        ReportType.studentEnrollment => 'Students & Fees',
+
+        ReportType.payrollRegister => 'Staff & Payroll',
+
+        ReportType.inventoryValuation ||
+        ReportType.inventoryMovements ||
+        ReportType.supplierLedger => 'Inventory & Store',
+
+        ReportType.auditLog => 'Security & Audit',
       };
 }
 
@@ -67,15 +94,15 @@ class ReportFilter extends Equatable {
     ReportType? reportType,
     DateTime? startDate,
     DateTime? endDate,
-    String? batchFilter,
-    String? monthYear,
+    String? Function()? batchFilter,
+    String? Function()? monthYear,
   }) {
     return ReportFilter(
       reportType: reportType ?? this.reportType,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
-      batchFilter: batchFilter ?? this.batchFilter,
-      monthYear: monthYear ?? this.monthYear,
+      batchFilter: batchFilter != null ? batchFilter() : this.batchFilter,
+      monthYear: monthYear != null ? monthYear() : this.monthYear,
     );
   }
 

@@ -29,8 +29,9 @@ class _ItemIssuanceDialogState extends ConsumerState<ItemIssuanceDialog> {
   final _qtyCtrl = TextEditingController(text: '1');
   final _priceCtrl = TextEditingController(text: '0');
   final _reasonCtrl = TextEditingController();
+  final _customerNameCtrl = TextEditingController(text: 'Walk-in Customer');
   int? _selectedItemId;
-  String _recipientType = 'student'; // 'student' or 'staff'
+  String _recipientType = 'student'; // 'student', 'staff', or 'customer'
   int? _selectedStudentId;
   int? _selectedStaffId;
   int? _selectedFeeVoucherId;
@@ -43,6 +44,7 @@ class _ItemIssuanceDialogState extends ConsumerState<ItemIssuanceDialog> {
     _qtyCtrl.dispose();
     _priceCtrl.dispose();
     _reasonCtrl.dispose();
+    _customerNameCtrl.dispose();
     super.dispose();
   }
 
@@ -61,7 +63,7 @@ class _ItemIssuanceDialogState extends ConsumerState<ItemIssuanceDialog> {
     final priceRupees = double.tryParse(_priceCtrl.text.trim()) ?? 0;
     final reason = _reasonCtrl.text.trim();
     if (reason.isEmpty) {
-      setState(() => _errorMessage = 'Issuance reason is required.');
+      setState(() => _errorMessage = 'Purpose / reason is required.');
       return;
     }
 
@@ -71,6 +73,10 @@ class _ItemIssuanceDialogState extends ConsumerState<ItemIssuanceDialog> {
     }
     if (_recipientType == 'staff' && _selectedStaffId == null) {
       setState(() => _errorMessage = 'Please select a staff member.');
+      return;
+    }
+    if (_recipientType == 'customer' && _customerNameCtrl.text.trim().isEmpty) {
+      setState(() => _errorMessage = 'Please enter customer / parent name.');
       return;
     }
 
@@ -84,6 +90,10 @@ class _ItemIssuanceDialogState extends ConsumerState<ItemIssuanceDialog> {
 
     final useCase = ref.read(issueItemUseCaseProvider);
 
+    final effectiveReason = _recipientType == 'customer'
+        ? '${_customerNameCtrl.text.trim()}${reason.isNotEmpty ? " - $reason" : ""}'
+        : reason;
+
     final res = await useCase(
       userPermissions: userPermissions,
       itemId: _selectedItemId!,
@@ -93,7 +103,7 @@ class _ItemIssuanceDialogState extends ConsumerState<ItemIssuanceDialog> {
       studentId: _recipientType == 'student' ? _selectedStudentId : null,
       staffId: _recipientType == 'staff' ? _selectedStaffId : null,
       feeVoucherId: _chargeVoucher ? _selectedFeeVoucherId : null,
-      reason: reason,
+      reason: effectiveReason,
       createdBy: currentUser?.id ?? 1,
     );
 
@@ -210,15 +220,16 @@ class _ItemIssuanceDialogState extends ConsumerState<ItemIssuanceDialog> {
                 // Recipient Type Selector
                 SegmentedButton<String>(
                   segments: const [
-                    ButtonSegment(value: 'student', label: Text('Issue to Student')),
-                    ButtonSegment(value: 'staff', label: Text('Issue to Staff / Teacher')),
+                    ButtonSegment(value: 'student', label: Text('Student')),
+                    ButtonSegment(value: 'staff', label: Text('Staff')),
+                    ButtonSegment(value: 'customer', label: Text('Walk-in Customer / Parent')),
                   ],
                   selected: {_recipientType},
                   onSelectionChanged: (set) => setState(() => _recipientType = set.first),
                 ),
                 const SizedBox(height: 14),
 
-                // Student / Staff Selector
+                // Student / Staff / Customer Selector
                 if (_recipientType == 'student')
                   studentsAsync.when(
                     data: (List<Student> students) => DropdownButtonFormField<int>(
@@ -235,7 +246,7 @@ class _ItemIssuanceDialogState extends ConsumerState<ItemIssuanceDialog> {
                     loading: () => const SizedBox.shrink(),
                     error: (Object err, _) => Text('Error loading students: $err'),
                   )
-                else
+                else if (_recipientType == 'staff')
                   staffAsync.when(
                     data: (List<StaffMember> staff) => DropdownButtonFormField<int>(
                       initialValue: _selectedStaffId,
@@ -250,6 +261,12 @@ class _ItemIssuanceDialogState extends ConsumerState<ItemIssuanceDialog> {
                     ),
                     loading: () => const SizedBox.shrink(),
                     error: (Object err, _) => Text('Error loading staff: $err'),
+                  )
+                else
+                  AppTextField(
+                    controller: _customerNameCtrl,
+                    label: 'Customer / Buyer Name *',
+                    hint: 'e.g. Parent of Roll #15, Walk-in Buyer',
                   ),
                 const SizedBox(height: 14),
 
@@ -297,16 +314,18 @@ class _ItemIssuanceDialogState extends ConsumerState<ItemIssuanceDialog> {
                 ),
                 const SizedBox(height: 24),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 8,
                   children: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(false),
                       child: const Text('Cancel'),
                     ),
-                    const SizedBox(width: 12),
                     PrimaryButton(
-                      label: 'Issue Item',
+                      label: 'Complete Sale / Issue',
                       icon: Icons.check,
                       isLoading: _isLoading,
                       onPressed: _submit,

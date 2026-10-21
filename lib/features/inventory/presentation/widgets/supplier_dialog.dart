@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/money/money.dart';
 import '../../../../core/security/permission_service.dart';
@@ -10,6 +11,7 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../domain/entities/inventory_entities.dart';
 import '../providers/inventory_providers.dart';
 
 class SupplierFormDialog extends ConsumerStatefulWidget {
@@ -168,14 +170,16 @@ class _SupplierFormDialogState extends ConsumerState<SupplierFormDialog> {
               ),
               const SizedBox(height: 24),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(false),
                     child: const Text('Cancel'),
                   ),
-                  const SizedBox(width: 12),
                   PrimaryButton(
                     label: 'Save Supplier',
                     icon: Icons.check,
@@ -366,14 +370,16 @@ class _SupplierPaymentDialogState extends ConsumerState<SupplierPaymentDialog> {
               ),
               const SizedBox(height: 24),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(false),
                     child: const Text('Cancel'),
                   ),
-                  const SizedBox(width: 12),
                   PrimaryButton(
                     label: 'Record Payment',
                     icon: Icons.check,
@@ -381,6 +387,151 @@ class _SupplierPaymentDialogState extends ConsumerState<SupplierPaymentDialog> {
                     onPressed: _submit,
                   ),
                 ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SupplierLedgerDialog extends ConsumerWidget {
+  const SupplierLedgerDialog({super.key, required this.supplier});
+  final Supplier supplier;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ledgerAsync = ref.watch(supplierLedgerProvider(supplier.id));
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 680, maxHeight: 600),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${supplier.name} - Statement & Khata',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.headingCol(context),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Contact: ${supplier.contactPerson ?? "N/A"} | Phone: ${supplier.phone ?? "N/A"}${supplier.address != null ? " | ${supplier.address}" : ""}',
+                          style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: supplier.currentBalance.paisa > 0 ? Colors.red.shade50 : Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: supplier.currentBalance.paisa > 0 ? Colors.red.shade200 : Colors.green.shade200,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Outstanding Payable Balance:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: supplier.currentBalance.paisa > 0 ? Colors.red.shade900 : Colors.green.shade900,
+                      ),
+                    ),
+                    Text(
+                      supplier.currentBalance.format(),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: supplier.currentBalance.paisa > 0 ? Colors.red.shade900 : Colors.green.shade900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Transaction History',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ledgerAsync.when(
+                  data: (entries) {
+                    if (entries.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'No transaction entries found for this supplier.',
+                          style: TextStyle(color: AppColors.textMuted),
+                        ),
+                      );
+                    }
+                    return ListView.separated(
+                      itemCount: entries.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, idx) {
+                        final entry = entries[idx];
+                        final isPurchase = entry.transactionType == 'purchase';
+                        return ListTile(
+                          dense: true,
+                          leading: Icon(
+                            isPurchase ? Icons.shopping_bag_outlined : Icons.payments_outlined,
+                            color: isPurchase ? Colors.orange : Colors.green,
+                          ),
+                          title: Text(
+                            '${isPurchase ? "Purchase Bill" : "Payment"} (${entry.referenceNumber ?? "N/A"})',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            '${DateFormat('dd/MM/yyyy').format(entry.transactionDate)} | ${entry.notes ?? ""}',
+                            style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                          ),
+                          trailing: Text(
+                            entry.amount.format(),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isPurchase ? Colors.orange.shade800 : Colors.green.shade800,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('Error loading ledger: $e')),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close'),
+                ),
               ),
             ],
           ),

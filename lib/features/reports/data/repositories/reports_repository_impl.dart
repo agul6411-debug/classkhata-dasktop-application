@@ -33,8 +33,12 @@ class ReportsRepositoryImpl implements ReportsRepository {
           return Success(await _buildFeeCollectionSummary(filter, now));
         case ReportType.defaultersAging:
           return Success(await _buildDefaultersAging(filter, now));
+        case ReportType.expenseSummary:
+          return Success(await _buildExpenseSummary(filter, now));
         case ReportType.cashBookStatement:
           return Success(await _buildCashBookStatement(filter, now));
+        case ReportType.dayClosingSummary:
+          return Success(await _buildDayClosingSummary(filter, now));
         case ReportType.profitLossSummary:
           return Success(await _buildProfitLossSummary(filter, now));
         case ReportType.payrollRegister:
@@ -83,12 +87,22 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final studentMap = {for (final s in students) s.id: s};
     final batchMap = {for (final b in batches) b.id: b.name};
 
+    final batchFilterId = filter.batchFilter != null && filter.batchFilter!.isNotEmpty
+        ? int.tryParse(filter.batchFilter!)
+        : null;
+
     int totalAmountPaisa = 0;
     final rows = <List<String>>[];
 
     for (final r in receipts) {
-      totalAmountPaisa += r.amountPaisa;
       final voucher = voucherMap[r.voucherId];
+      if (filter.batchFilter != null && filter.batchFilter!.isNotEmpty) {
+        if (voucher == null) continue;
+        if (batchFilterId != null && voucher.batchId != batchFilterId) continue;
+        if (batchFilterId == null && batchMap[voucher.batchId] != filter.batchFilter) continue;
+      }
+
+      totalAmountPaisa += r.amountPaisa;
       final student = voucher != null ? studentMap[voucher.studentId] : null;
       final batchName = voucher != null ? (batchMap[voucher.batchId] ?? '-') : '-';
 
@@ -130,6 +144,10 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final studentMap = {for (final s in students) s.id: s};
     final batchMap = {for (final b in batches) b.id: b.name};
 
+    final batchFilterId = filter.batchFilter != null && filter.batchFilter!.isNotEmpty
+        ? int.tryParse(filter.batchFilter!)
+        : null;
+
     int totalOutstandingPaisa = 0;
     int count30 = 0;
     int count60 = 0;
@@ -137,6 +155,11 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final rows = <List<String>>[];
 
     for (final v in unpaidVouchers) {
+      if (filter.batchFilter != null && filter.batchFilter!.isNotEmpty) {
+        if (batchFilterId != null && v.batchId != batchFilterId) continue;
+        if (batchFilterId == null && batchMap[v.batchId] != filter.batchFilter) continue;
+      }
+
       final student = studentMap[v.studentId];
       final batchName = batchMap[v.batchId] ?? '-';
       final remainingPaisa = v.totalDuePaisa - v.amountPaidPaisa;
@@ -199,6 +222,55 @@ class ReportsRepositoryImpl implements ReportsRepository {
   }
 
   // ---------------------------------------------------------------------------
+  // 2b. Operational Expenses Summary
+  // ---------------------------------------------------------------------------
+  Future<ReportData> _buildExpenseSummary(ReportFilter filter, DateTime now) async {
+    final start = DateTime(filter.startDate.year, filter.startDate.month, filter.startDate.day);
+    final end = DateTime(filter.endDate.year, filter.endDate.month, filter.endDate.day, 23, 59, 59);
+
+    final expenses = await (_db.select(_db.expensesTable)
+          ..where((t) =>
+              t.expenseDate.isBiggerOrEqualValue(start) &
+              t.expenseDate.isSmallerOrEqualValue(end) &
+              t.reversedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.expenseDate)]))
+        .get();
+
+    final categories = await _db.select(_db.expenseCategoriesTable).get();
+    final catMap = {for (final c in categories) c.id: c.name};
+
+    int totalAmountPaisa = 0;
+    final rows = <List<String>>[];
+
+    for (final exp in expenses) {
+      totalAmountPaisa += exp.amountPaisa;
+      final catName = catMap[exp.categoryId] ?? 'General';
+      rows.add([
+        '${exp.expenseDate.day}/${exp.expenseDate.month}/${exp.expenseDate.year}',
+        catName,
+        exp.description,
+        PaymentModes.getPdfDisplayName(exp.paymentMode),
+        exp.referenceNumber ?? '-',
+        Money.fromPaisa(exp.amountPaisa).format(),
+      ]);
+    }
+
+    return ReportData(
+      type: filter.reportType,
+      title: 'Operational Expenses Summary',
+      subtitle: 'From ${start.day}/${start.month}/${start.year} to ${end.day}/${end.month}/${end.year}',
+      headers: const ['Date', 'Category', 'Description', 'Payment Mode', 'Reference #', 'Amount (Rs.)'],
+      rows: rows,
+      summaryMetrics: {
+        'Total Expenses': Money.fromPaisa(totalAmountPaisa).format(),
+        'Total Entries': '${rows.length}',
+        'Active Categories': '${catMap.length}',
+      },
+      generatedAt: now,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // 3. Cash Book Statement
   // ---------------------------------------------------------------------------
   Future<ReportData> _buildCashBookStatement(ReportFilter filter, DateTime now) async {
@@ -247,6 +319,72 @@ class ReportsRepositoryImpl implements ReportsRepository {
         'Total Inflows': Money.fromPaisa(totalInflowPaisa).format(),
         'Total Outflows': Money.fromPaisa(totalOutflowPaisa).format(),
         'Net Movement': Money.fromPaisa(netMovementPaisa).format(),
+      },
+      generatedAt: now,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 3b. Day Closing & Cash Reconciliation
+  // ---------------------------------------------------------------------------
+  Future<ReportData> _buildDayClosingSummary(ReportFilter filter, DateTime now) async {
+    final start = DateTime(filter.startDate.year, filter.startDate.month, filter.startDate.day);
+    final end = DateTime(filter.endDate.year, filter.endDate.month, filter.endDate.day, 23, 59, 59);
+
+    final closings = await (_db.select(_db.dayClosingsTable)
+          ..where((t) =>
+              t.closingDate.isBiggerOrEqualValue(start) &
+              t.closingDate.isSmallerOrEqualValue(end))
+          ..orderBy([(t) => OrderingTerm.desc(t.closingDate)]))
+        .get();
+
+    final users = await _db.select(_db.usersTable).get();
+    final userMap = {for (final u in users) u.id: u.name};
+
+    int totalReceiptsPaisa = 0;
+    int totalExpensesPaisa = 0;
+    int totalDiscrepancyPaisa = 0;
+    final rows = <List<String>>[];
+
+    for (final c in closings) {
+      totalReceiptsPaisa += c.totalReceiptsPaisa;
+      totalExpensesPaisa += c.totalExpensesPaisa;
+      totalDiscrepancyPaisa += c.discrepancyPaisa;
+
+      rows.add([
+        '${c.closingDate.day}/${c.closingDate.month}/${c.closingDate.year}',
+        userMap[c.closedBy] ?? 'User #${c.closedBy}',
+        Money.fromPaisa(c.openingCashPaisa).format(),
+        Money.fromPaisa(c.totalReceiptsPaisa).format(),
+        Money.fromPaisa(c.totalExpensesPaisa).format(),
+        Money.fromPaisa(c.expectedClosingCashPaisa).format(),
+        Money.fromPaisa(c.actualCashPaisa).format(),
+        c.discrepancyPaisa == 0 ? 'MATCH (0)' : Money.fromPaisa(c.discrepancyPaisa).format(),
+        c.discrepancyNote ?? '-',
+      ]);
+    }
+
+    return ReportData(
+      type: filter.reportType,
+      title: 'Day Closing & Drawer Reconciliation',
+      subtitle: 'From ${start.day}/${start.month}/${start.year} to ${end.day}/${end.month}/${end.year}',
+      headers: const [
+        'Closing Date',
+        'Closed By',
+        'Opening Cash',
+        'Receipts',
+        'Expenses',
+        'Expected Cash',
+        'Actual Cash',
+        'Discrepancy',
+        'Notes',
+      ],
+      rows: rows,
+      summaryMetrics: {
+        'Total Receipts': Money.fromPaisa(totalReceiptsPaisa).format(),
+        'Total Expenses': Money.fromPaisa(totalExpensesPaisa).format(),
+        'Net Discrepancy': Money.fromPaisa(totalDiscrepancyPaisa).format(),
+        'Total Closings': '${rows.length}',
       },
       generatedAt: now,
     );
@@ -317,22 +455,37 @@ class ReportsRepositoryImpl implements ReportsRepository {
   // 5. Monthly Payroll Register
   // ---------------------------------------------------------------------------
   Future<ReportData> _buildPayrollRegister(ReportFilter filter, DateTime now) async {
+    final start = DateTime(filter.startDate.year, filter.startDate.month, filter.startDate.day);
+    final end = DateTime(filter.endDate.year, filter.endDate.month, filter.endDate.day, 23, 59, 59);
+
+    final startMonth = '${start.year}-${start.month.toString().padLeft(2, '0')}';
+    final endMonth = '${end.year}-${end.month.toString().padLeft(2, '0')}';
+
     final query = _db.select(_db.payrollRunsTable);
     if (filter.monthYear != null && filter.monthYear!.isNotEmpty) {
       query.where((t) => t.monthYear.equals(filter.monthYear!));
+    } else {
+      query.where((t) => t.monthYear.isBiggerOrEqualValue(startMonth) & t.monthYear.isSmallerOrEqualValue(endMonth));
     }
-    query.orderBy([(t) => OrderingTerm.desc(t.createdAt)]);
+    query.orderBy([(t) => OrderingTerm.desc(t.monthYear), (t) => OrderingTerm.desc(t.createdAt)]);
     final runs = await query.get();
 
     final staff = await _db.select(_db.staffMembersTable).get();
     final staffMap = {for (final s in staff) s.id: s};
 
     int totalNetSalaryPaisa = 0;
+    int paidCount = 0;
+    int unpaidCount = 0;
     final rows = <List<String>>[];
 
     for (final r in runs) {
       final s = staffMap[r.staffId];
       totalNetSalaryPaisa += r.netSalaryPaisa;
+      if (r.status.toLowerCase() == 'paid') {
+        paidCount++;
+      } else {
+        unpaidCount++;
+      }
 
       rows.add([
         s?.staffCode ?? '-',
@@ -345,13 +498,17 @@ class ReportsRepositoryImpl implements ReportsRepository {
         Money.fromPaisa(r.advanceRecoveryPaisa).format(),
         Money.fromPaisa(r.netSalaryPaisa).format(),
         r.status.toUpperCase(),
+        r.paidAt != null ? '${r.paidAt!.day}/${r.paidAt!.month}/${r.paidAt!.year}' : '-',
+        r.paymentMode != null ? r.paymentMode!.toUpperCase() : '-',
       ]);
     }
 
     return ReportData(
       type: filter.reportType,
       title: 'Monthly Payroll Register',
-      subtitle: filter.monthYear != null ? 'Payroll for period ${filter.monthYear}' : 'All historical payroll records',
+      subtitle: filter.monthYear != null
+          ? 'Payroll for period ${filter.monthYear}'
+          : 'Payroll records from $startMonth to $endMonth',
       headers: const [
         'Staff Code',
         'Staff Name',
@@ -363,11 +520,15 @@ class ReportsRepositoryImpl implements ReportsRepository {
         'Adv. Recovery',
         'Net Salary',
         'Status',
+        'Paid Date',
+        'Mode',
       ],
       rows: rows,
       summaryMetrics: {
-        'Total Net Disbursed': Money.fromPaisa(totalNetSalaryPaisa).format(),
-        'Staff Count': '${rows.length}',
+        'Total Net Payable': Money.fromPaisa(totalNetSalaryPaisa).format(),
+        'Total Staff Runs': '${rows.length}',
+        'Paid Runs': '$paidCount',
+        'Unpaid Runs': '$unpaidCount',
       },
       generatedAt: now,
     );
