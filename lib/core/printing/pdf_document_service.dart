@@ -3,12 +3,15 @@
 /// Student ID Cards, and Fee Cards for printing and print preview.
 library;
 
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../features/fees/domain/entities/fee_entities.dart';
 import '../../features/payroll/domain/entities/payroll_entities.dart';
+import '../../features/payroll/domain/entities/staff_profile.dart';
+import '../../features/payroll/domain/services/staff_profile_service.dart';
 import '../../features/students/domain/entities/student_entities.dart';
 import '../constants/payment_modes.dart';
 import '../money/money.dart';
@@ -116,23 +119,6 @@ class PdfDocumentService {
                   ],
                 ),
                 pw.Divider(thickness: 0.8),
-                pw.SizedBox(height: 6),
-                // Vector QR Code
-                pw.Center(
-                  child: pw.BarcodeWidget(
-                    data: receipt.qrData,
-                    barcode: pw.Barcode.qrCode(),
-                    width: 75,
-                    height: 75,
-                  ),
-                ),
-                pw.SizedBox(height: 4),
-                pw.Center(
-                  child: pw.Text(
-                    'Scan to verify receipt authenticity',
-                    style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700),
-                  ),
-                ),
                 pw.SizedBox(height: 8),
                 pw.Divider(thickness: 0.5),
                 pw.Center(
@@ -301,33 +287,22 @@ class PdfDocumentService {
                   pw.Spacer(),
 
                   // Bottom QR & Signature Section
+                  // Bottom Note & Signature Section
                   pw.Row(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Row(
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.BarcodeWidget(
-                            data: receipt.qrData,
-                            barcode: pw.Barcode.qrCode(),
-                            width: 65,
-                            height: 65,
-                          ),
-                          pw.SizedBox(width: 10),
-                          pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Text('Official Digital Verification', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
-                              pw.Text('Scan QR to verify authentic fee voucher entry', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
-                              pw.Text('$academyName • Verified Audit Trail', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
-                            ],
-                          ),
+                          pw.Text('Official Fee Receipt / Voucher', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                          pw.Text('$academyName • Verified Record', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
                         ],
                       ),
                       pw.Column(
                         children: [
                           pw.Container(
-                            width: 130,
+                            width: 140,
                             decoration: const pw.BoxDecoration(
                               border: pw.Border(top: pw.BorderSide(color: PdfColors.grey700)),
                             ),
@@ -670,7 +645,7 @@ class PdfDocumentService {
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                      child: pw.Text(voucher.carryForward.format(), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.red900, fontWeight: pw.FontWeight.bold)),
+                      child: pw.Text(voucher.carryForward.format(), textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 6.5, color: PdfColors.red900, fontWeight: pw.FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -784,16 +759,8 @@ class PdfDocumentService {
               pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.BarcodeWidget(
-                    data: voucher.voucherNumber,
-                    barcode: pw.Barcode.code128(),
-                    width: 90,
-                    height: 16,
-                    drawText: false,
-                  ),
-                  pw.SizedBox(height: 1),
-                  pw.Text(voucher.voucherNumber, style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey700)),
-                  pw.SizedBox(height: 4),
+                  pw.Text('Ref: ${voucher.voucherNumber}', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800)),
+                  pw.SizedBox(height: 14),
                   pw.Container(
                     width: 100,
                     decoration: const pw.BoxDecoration(
@@ -1362,6 +1329,584 @@ class PdfDocumentService {
         val,
         textAlign: align,
         style: const pw.TextStyle(fontSize: 8),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 6. Staff Employment & Registration Dossier (2 Pages: Bio-data + Terms)
+  // ---------------------------------------------------------------------------
+
+  static Future<Uint8List> generateStaffJoiningDossierPdf({
+    required StaffMember staff,
+    required StaffProfile profile,
+    required String academyName,
+    String? academyTagline,
+    String? academyPhone,
+    String? academyAddress,
+    String? logoPath,
+    String? schoolTerms,
+    PdfPageFormat format = PdfPageFormat.a4,
+  }) async {
+    final doc = pw.Document();
+
+    Uint8List? logoBytes;
+    if (logoPath != null && logoPath.isNotEmpty) {
+      try {
+        final f = File(logoPath);
+        if (f.existsSync()) {
+          logoBytes = await f.readAsBytes();
+        }
+      } catch (_) {}
+    }
+
+    Uint8List? photoBytes;
+    if (profile.photoPath != null && profile.photoPath!.isNotEmpty) {
+      try {
+        final f = File(profile.photoPath!);
+        if (f.existsSync()) {
+          photoBytes = await f.readAsBytes();
+        }
+      } catch (_) {}
+    }
+
+    // -------------------------------------------------------------------------
+    // PAGE 1: STAFF RECRUITMENT & PERSONAL DOSSIER
+    // -------------------------------------------------------------------------
+    final depositAmount = profile.securityDepositAmount > 0
+        ? profile.securityDepositAmount
+        : profile.basicSalary;
+    final depositText = profile.securityDepositRequired
+        ? 'YES (Rs. $depositAmount Held in Deposit)'
+        : 'NO (Exempted)';
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: format,
+        margin: const pw.EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        build: (context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  if (logoBytes != null)
+                    pw.Container(
+                      width: 50,
+                      height: 50,
+                      margin: const pw.EdgeInsets.only(right: 12),
+                      child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
+                    ),
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          academyName,
+                          style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900),
+                        ),
+                        if (academyTagline != null && academyTagline.isNotEmpty)
+                          pw.Text(academyTagline, style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                        if (academyAddress != null && academyAddress.isNotEmpty)
+                          pw.Text(academyAddress, style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600)),
+                        if (academyPhone != null && academyPhone.isNotEmpty)
+                          pw.Text('Tel: $academyPhone', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600)),
+                      ],
+                    ),
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.blueGrey800),
+                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                      color: PdfColors.grey100,
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text('STAFF CODE: ${staff.staffCode}', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900)),
+                        pw.SizedBox(height: 2),
+                        pw.Text('Joined: ${staff.joiningDate.day}/${staff.joiningDate.month}/${staff.joiningDate.year}', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700)),
+                        pw.Text('Role: ${staff.designation}', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 6),
+
+              // Title Banner
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(vertical: 3.5, horizontal: 8),
+                decoration: const pw.BoxDecoration(color: PdfColors.blueGrey800),
+                child: pw.Center(
+                  child: pw.Text(
+                    'STAFF EMPLOYMENT & REGISTRATION DOSSIER',
+                    style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white, letterSpacing: 0.8),
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 6),
+
+              // Section 1: Bio-Data & Photo Section
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // Bio-Data Table (4 columns)
+                  pw.Expanded(
+                    child: pw.Table(
+                      border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                      columnWidths: const {
+                        0: pw.FlexColumnWidth(1.1),
+                        1: pw.FlexColumnWidth(1.9),
+                        2: pw.FlexColumnWidth(1.1),
+                        3: pw.FlexColumnWidth(1.9),
+                      },
+                      children: [
+                        pw.TableRow(children: [
+                          _dossierCell('Full Name:', bold: true),
+                          _dossierCell(staff.name, highlight: true),
+                          _dossierCell('Father / Husband:', bold: true),
+                          _dossierCell(profile.fatherOrHusbandName ?? '-'),
+                        ]),
+                        pw.TableRow(children: [
+                          _dossierCell('CNIC / B-Form:', bold: true),
+                          _dossierCell(staff.cnic ?? '-'),
+                          _dossierCell('Gender / Status:', bold: true),
+                          _dossierCell('${profile.gender} / ${profile.maritalStatus}'),
+                        ]),
+                        pw.TableRow(children: [
+                          _dossierCell('Date of Birth:', bold: true),
+                          _dossierCell(profile.dob ?? '-'),
+                          _dossierCell('Calculated Age:', bold: true),
+                          _dossierCell(profile.calculatedAge, highlight: true),
+                        ]),
+                        pw.TableRow(children: [
+                          _dossierCell('Blood Group:', bold: true),
+                          _dossierCell(profile.bloodGroup ?? '-'),
+                          _dossierCell('Religion / Nation:', bold: true),
+                          _dossierCell('${profile.religion} / ${profile.nationality}'),
+                        ]),
+                        pw.TableRow(children: [
+                          _dossierCell('Domicile District:', bold: true),
+                          _dossierCell(profile.domicile ?? '-'),
+                          _dossierCell('Employment Nature:', bold: true),
+                          _dossierCell(profile.employmentType),
+                        ]),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(width: 8),
+
+                  // Photo Box
+                  pw.Container(
+                    width: 75,
+                    height: 94,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey500, width: 1),
+                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+                      color: PdfColors.grey100,
+                    ),
+                    child: photoBytes != null
+                        ? pw.ClipRRect(
+                            horizontalRadius: 3,
+                            verticalRadius: 3,
+                            child: pw.Image(pw.MemoryImage(photoBytes), fit: pw.BoxFit.cover),
+                          )
+                        : pw.Center(
+                            child: pw.Text(
+                              'AFFIX\nRECENT\nPASSPORT\nPHOTO',
+                              textAlign: pw.TextAlign.center,
+                              style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey600),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 5),
+
+              // Section 2: Contact & Residential Details
+              _dossierSectionHeading('CONTACT & RESIDENTIAL INFORMATION'),
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                columnWidths: const {
+                  0: pw.FlexColumnWidth(1.2),
+                  1: pw.FlexColumnWidth(2.3),
+                  2: pw.FlexColumnWidth(1.2),
+                  3: pw.FlexColumnWidth(2.3),
+                },
+                children: [
+                  pw.TableRow(children: [
+                    _dossierCell('Mobile / WhatsApp:', bold: true),
+                    _dossierCell(staff.phone, highlight: true),
+                    _dossierCell('Home / Tel:', bold: true),
+                    _dossierCell(profile.homePhone ?? '-'),
+                  ]),
+                  pw.TableRow(children: [
+                    _dossierCell('Email Address:', bold: true),
+                    _dossierCell(profile.email ?? '-'),
+                    _dossierCell('Emergency Contact:', bold: true),
+                    _dossierCell(profile.emergencyContactName != null && profile.emergencyContactName!.isNotEmpty
+                        ? '${profile.emergencyContactName} (${profile.emergencyContactPhone ?? "-"})'
+                        : '-'),
+                  ]),
+                  pw.TableRow(children: [
+                    _dossierCell('Current Address:', bold: true),
+                    _dossierCell(profile.currentAddress ?? '-'),
+                    _dossierCell('Permanent Address:', bold: true),
+                    _dossierCell(profile.permanentAddress ?? '-'),
+                  ]),
+                ],
+              ),
+              pw.SizedBox(height: 5),
+
+              // Section 3: Academic Qualifications & Teaching Specialization
+              _dossierSectionHeading('ACADEMIC QUALIFICATIONS & TEACHING SPECIALIZATION'),
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                columnWidths: const {
+                  0: pw.FlexColumnWidth(1.2),
+                  1: pw.FlexColumnWidth(2.3),
+                  2: pw.FlexColumnWidth(1.2),
+                  3: pw.FlexColumnWidth(2.3),
+                },
+                children: [
+                  pw.TableRow(children: [
+                    _dossierCell('Highest Degree:', bold: true),
+                    _dossierCell(profile.highestQualification ?? '-'),
+                    _dossierCell('Institute / Board:', bold: true),
+                    _dossierCell(profile.institute ?? '-'),
+                  ]),
+                  pw.TableRow(children: [
+                    _dossierCell('Passing Year:', bold: true),
+                    _dossierCell(profile.passingYear ?? '-'),
+                    _dossierCell('Prof. Training:', bold: true),
+                    _dossierCell(profile.professionalTraining ?? 'None'),
+                  ]),
+                  pw.TableRow(children: [
+                    _dossierCell('Subject Specialist:', bold: true),
+                    _dossierCell(profile.subjectSpecialist ?? 'General Teaching', highlight: true),
+                    _dossierCell('Assigned Classes:', bold: true),
+                    _dossierCell(profile.assignedClasses ?? 'All Grades / Sections'),
+                  ]),
+                  pw.TableRow(children: [
+                    _dossierCell('Total Experience:', bold: true),
+                    _dossierCell(profile.experienceYears != null && profile.experienceYears!.isNotEmpty ? '${profile.experienceYears} Years' : '-'),
+                    _dossierCell('Previous School:', bold: true),
+                    _dossierCell(profile.previousInstitute ?? '-'),
+                  ]),
+                ],
+              ),
+              pw.SizedBox(height: 5),
+
+              // Section 4: Remuneration, Bank & 1-Month Salary Security Deposit Policy
+              _dossierSectionHeading('REMUNERATION, BANK ACCOUNT & 1-MONTH SALARY SECURITY DEPOSIT'),
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                columnWidths: const {
+                  0: pw.FlexColumnWidth(1.3),
+                  1: pw.FlexColumnWidth(2.2),
+                  2: pw.FlexColumnWidth(1.3),
+                  3: pw.FlexColumnWidth(2.2),
+                },
+                children: [
+                  pw.TableRow(children: [
+                    _dossierCell('Basic Pay (Monthly):', bold: true),
+                    _dossierCell('Rs. ${profile.basicSalary}'),
+                    _dossierCell('Allowances / Net:', bold: true),
+                    _dossierCell('Rs. ${profile.allowances} (Gross: Rs. ${profile.grossPackage})', highlight: true),
+                  ]),
+                  pw.TableRow(children: [
+                    _dossierCell('1-Month Deposit:', bold: true),
+                    _dossierCell(depositText, highlight: true),
+                    _dossierCell('Deposit Terms:', bold: true),
+                    _dossierCell(profile.securityDepositTerms),
+                  ]),
+                  pw.TableRow(children: [
+                    _dossierCell('Salary Bank A/C:', bold: true),
+                    _dossierCell(profile.bankName != null && profile.bankName!.isNotEmpty
+                        ? '${profile.bankName} - ${profile.bankAccountNumber ?? "-"}'
+                        : 'Cash Payment / Not Provided'),
+                    _dossierCell('Account Title:', bold: true),
+                    _dossierCell(profile.bankAccountTitle ?? staff.name),
+                  ]),
+                ],
+              ),
+              pw.SizedBox(height: 5),
+
+              // Section 5: References & Official Verification Checklist
+              _dossierSectionHeading('OFFICIAL REFERENCES & SUBMITTED DOCUMENTS VERIFICATION'),
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                columnWidths: const {
+                  0: pw.FlexColumnWidth(1.3),
+                  1: pw.FlexColumnWidth(2.2),
+                  2: pw.FlexColumnWidth(1.3),
+                  3: pw.FlexColumnWidth(2.2),
+                },
+                children: [
+                  pw.TableRow(children: [
+                    _dossierCell('Reference 1 (Guarantor):', bold: true),
+                    _dossierCell(profile.reference1Name != null && profile.reference1Name!.isNotEmpty
+                        ? '${profile.reference1Name} (${profile.reference1Relation ?? "-"})'
+                        : '-'),
+                    _dossierCell('Ref 1 Contact:', bold: true),
+                    _dossierCell(profile.reference1Phone ?? '-'),
+                  ]),
+                  pw.TableRow(children: [
+                    _dossierCell('Reference 2 (Guarantor):', bold: true),
+                    _dossierCell(profile.reference2Name != null && profile.reference2Name!.isNotEmpty
+                        ? '${profile.reference2Name} (${profile.reference2Relation ?? "-"})'
+                        : '-'),
+                    _dossierCell('Ref 2 Contact:', bold: true),
+                    _dossierCell(profile.reference2Phone ?? '-'),
+                  ]),
+                  pw.TableRow(children: [
+                    _dossierCell('Documents Submitted:', bold: true),
+                    _dossierCell(profile.documentsSubmitted ?? 'CNIC Copy, Educational Degrees, 2 Photos Verified'),
+                    _dossierCell('Official Verification:', bold: true),
+                    _dossierCell('Verified by HR / In-charge'),
+                  ]),
+                ],
+              ),
+              pw.SizedBox(height: 8),
+
+              // Official Document Footer (Page 1)
+              pw.Divider(thickness: 0.5, color: PdfColors.grey400),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Official Confidential Staff Record - $academyName', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
+                  pw.Text('Page 1 of 2  [ Turn over for Terms & Conditions and Agreement ]', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey800)),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    // -------------------------------------------------------------------------
+    // PAGE 2: TERMS OF EMPLOYMENT & CODE OF CONDUCT AGREEMENT
+    // -------------------------------------------------------------------------
+    final effectiveTerms = (schoolTerms != null && schoolTerms.trim().isNotEmpty)
+        ? schoolTerms.trim()
+        : StaffProfileService.defaultTerms;
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: format,
+        margin: const pw.EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        build: (context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  if (logoBytes != null)
+                    pw.Container(
+                      width: 40,
+                      height: 40,
+                      margin: const pw.EdgeInsets.only(right: 10),
+                      child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
+                    ),
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          academyName,
+                          style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900),
+                        ),
+                        pw.Text(
+                          'TERMS OF EMPLOYMENT & CODE OF CONDUCT AGREEMENT',
+                          style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800),
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey400),
+                      color: PdfColors.grey100,
+                    ),
+                    child: pw.Text('Page 2 of 2', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 5),
+
+              // Staff Details Strip
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(vertical: 3.5, horizontal: 8),
+                decoration: const pw.BoxDecoration(color: PdfColors.blueGrey50),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Employee: ${staff.name}', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                    pw.Text('Staff ID: ${staff.staffCode}', style: const pw.TextStyle(fontSize: 8)),
+                    pw.Text('Designation: ${staff.designation}', style: const pw.TextStyle(fontSize: 8)),
+                    pw.Text('CNIC: ${staff.cnic ?? "-"}', style: const pw.TextStyle(fontSize: 8)),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 6),
+
+              // Terms & Conditions Body (School's Custom Terms)
+              pw.Container(
+                padding: const pw.EdgeInsets.all(8),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                ),
+                child: pw.Text(
+                  effectiveTerms,
+                  style: const pw.TextStyle(fontSize: 7.3, color: PdfColors.grey900, lineSpacing: 1.4),
+                ),
+              ),
+              pw.SizedBox(height: 8),
+
+              // Employee Declaration Statement
+              pw.Container(
+                padding: const pw.EdgeInsets.all(7),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.blueGrey400, width: 0.8),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                  color: PdfColors.grey50,
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'EMPLOYEE SOLEMN UNDERTAKING & DECLARATION',
+                      style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900),
+                    ),
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      'I, ${staff.name}, hereby solemnly declare that all particulars stated in this registration dossier are true, complete, and authentic. I have carefully read, understood, and unconditionally accepted all the employment terms, responsibilities, leave rules, 1-month salary security deposit policy, and code of conduct set forth above by $academyName. I solemnly pledge to perform my educational duties with the highest standard of dedication, integrity, and institutional discipline.',
+                      style: pw.TextStyle(fontSize: 7.2, fontStyle: pw.FontStyle.italic, color: PdfColors.grey900, lineSpacing: 1.3),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 18),
+
+              // Signatures & Stamps
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Container(
+                        width: 145,
+                        decoration: const pw.BoxDecoration(
+                          border: pw.Border(top: pw.BorderSide(color: PdfColors.grey800, width: 1)),
+                        ),
+                        padding: const pw.EdgeInsets.only(top: 4),
+                        child: pw.Column(
+                          children: [
+                            pw.Text('Employee Signature & Thumb', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                            pw.SizedBox(height: 2),
+                            pw.Text('Date: _______________', style: const pw.TextStyle(fontSize: 6.8, color: PdfColors.grey700)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Container(
+                        width: 145,
+                        decoration: const pw.BoxDecoration(
+                          border: pw.Border(top: pw.BorderSide(color: PdfColors.grey800, width: 1)),
+                        ),
+                        padding: const pw.EdgeInsets.only(top: 4),
+                        child: pw.Column(
+                          children: [
+                            pw.Text('Principal / Head of Institution', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                            pw.SizedBox(height: 2),
+                            pw.Text('Official Stamp & Signature', style: const pw.TextStyle(fontSize: 6.8, color: PdfColors.grey700)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Container(
+                        width: 145,
+                        decoration: const pw.BoxDecoration(
+                          border: pw.Border(top: pw.BorderSide(color: PdfColors.grey800, width: 1)),
+                        ),
+                        padding: const pw.EdgeInsets.only(top: 4),
+                        child: pw.Column(
+                          children: [
+                            pw.Text('Managing Director / Chairman', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
+                            pw.SizedBox(height: 2),
+                            pw.Text('Authorized Signature & Seal', style: const pw.TextStyle(fontSize: 6.8, color: PdfColors.grey700)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 8),
+              pw.Divider(thickness: 0.5, color: PdfColors.grey400),
+              pw.Center(
+                child: pw.Text(
+                  'ClassKhata Verified Official Agreement - Generated on ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+                  style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey600),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    return doc.save();
+  }
+
+  static pw.Widget _dossierSectionHeading(String title) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      margin: const pw.EdgeInsets.only(bottom: 3),
+      decoration: const pw.BoxDecoration(
+        color: PdfColors.grey200,
+        borderRadius: pw.BorderRadius.all(pw.Radius.circular(2)),
+      ),
+      child: pw.Text(
+        title,
+        style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900),
+      ),
+    );
+  }
+
+  static pw.Widget _dossierCell(
+    String text, {
+    bool bold = false,
+    bool highlight = false,
+  }) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3.5),
+      color: bold ? PdfColors.grey50 : null,
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: 8,
+          fontWeight: (bold || highlight) ? pw.FontWeight.bold : pw.FontWeight.normal,
+          color: highlight ? PdfColors.blueGrey900 : (bold ? PdfColors.grey800 : PdfColors.black),
+        ),
       ),
     );
   }

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Family;
 import '../../../../app/theme/app_theme.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
-import '../../domain/entities/student_entities.dart';
 import '../providers/student_providers.dart';
 
 class AddFamilyDialog extends ConsumerStatefulWidget {
@@ -209,14 +208,16 @@ class _AddFamilyDialogState extends ConsumerState<AddFamilyDialog> {
                 const SizedBox(height: 24),
 
                 // Action Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 8,
                   children: [
                     TextButton(
                       onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
                       child: const Text('Cancel'),
                     ),
-                    const SizedBox(width: 12),
                     PrimaryButton(
                       label: 'Save Family',
                       icon: Icons.check_circle_outline,

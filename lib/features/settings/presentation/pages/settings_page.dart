@@ -433,7 +433,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
               const Icon(Icons.photo_library_outlined, size: 18, color: AppColors.accent),
               const SizedBox(width: 8),
               Text(
-                'School / Academy Logo (اسکول کا لوگو)',
+                'School / Academy Logo',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: textColor),
               ),
             ],
@@ -491,7 +491,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                       children: [
                         ElevatedButton.icon(
                           icon: const Icon(Icons.folder_open, size: 18),
-                          label: const Text('Browse Logo (لوگو منتخب کریں)'),
+                          label: const Text('Browse Logo'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.accent,
                             foregroundColor: Colors.white,
@@ -502,7 +502,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                               final result = await FilePicker.pickFiles(
                                 type: FileType.custom,
                                 allowedExtensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp'],
-                                dialogTitle: 'Select School Logo (اسکول کا لوگو منتخب کریں)',
+                                dialogTitle: 'Select School Logo',
                               );
                               if (result != null && result.files.single.path != null) {
                                 setState(() {
@@ -521,7 +521,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                         if (currentPath.isNotEmpty)
                           OutlinedButton.icon(
                             icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.overdue),
-                            label: const Text('Remove (ہٹائیں)', style: TextStyle(color: AppColors.overdue)),
+                            label: const Text('Remove', style: TextStyle(color: AppColors.overdue)),
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(color: AppColors.overdue),
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

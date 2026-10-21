@@ -7,12 +7,11 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:drift/drift.dart' as drift hide Column;
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart' hide Family, Column;
+import 'package:flutter_riverpod/flutter_riverpod.dart' hide Family;
 
 import '../../../../app/providers.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/database/app_database.dart';
-import '../../../../core/money/money.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
@@ -51,7 +50,6 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
   final _rollNumberCtrl = TextEditingController();
   String _gender = 'Male';
   DateTime? _dob;
-  DateTime _joiningDate = DateTime.now();
 
   // Guardian & Contact
   final _fatherNameCtrl = TextEditingController();
@@ -95,7 +93,6 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
       _emailCtrl.text = s.email ?? '';
       _selectedBatchId = s.batchId;
       _selectedFamilyId = s.familyId;
-      _joiningDate = s.joiningDate;
 
       // Load extended profile async
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -721,15 +718,16 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
 
                 const SizedBox(height: 16),
                 const Divider(),
-                // Actions
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 8,
                   children: [
                     OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: const Text('Cancel'),
                     ),
-                    const SizedBox(width: 12),
                     PrimaryButton(
                       label: isEditing ? 'Update Student Profile' : 'Register Student & Save Package',
                       isLoading: _isLoading,

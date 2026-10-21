@@ -43,6 +43,22 @@ class StudentProfileService {
     return StudentProfile.fromRawJson(row.value);
   }
 
+  /// Loads all extended student profiles in a single query.
+  static Future<Map<int, StudentProfile>> getAllProfiles(AppDatabase db) async {
+    final rows = await (db.select(db.settingsTable)
+          ..where((t) => t.key.like('student_meta_%')))
+        .get();
+    final result = <int, StudentProfile>{};
+    for (final row in rows) {
+      final idStr = row.key.replaceFirst('student_meta_', '');
+      final id = int.tryParse(idStr);
+      if (id != null) {
+        result[id] = StudentProfile.fromRawJson(row.value);
+      }
+    }
+    return result;
+  }
+
   /// Copies a user-picked photo to local Documents/ClassKhata/StudentPhotos directory.
   static Future<String> persistPhoto(String originalPath) async {
     final docDir = await getApplicationDocumentsDirectory();

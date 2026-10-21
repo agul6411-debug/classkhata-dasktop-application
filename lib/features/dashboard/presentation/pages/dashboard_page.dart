@@ -272,7 +272,7 @@ class DashboardPage extends ConsumerWidget {
                               children: [
                                 Expanded(
                                   child: _financialStatTile(
-                                    title: 'Fees & Inflow (آمدنی)',
+                                    title: 'Fees & Inflow',
                                     amount: pnl.totalIncome.format(),
                                     subtitle: 'Total fee collections & receipts',
                                     color: isDark ? const Color(0xFF4ADE80) : AppColors.paid,
@@ -283,7 +283,7 @@ class DashboardPage extends ConsumerWidget {
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: _financialStatTile(
-                                    title: 'Expenses & Payroll (اخراجات)',
+                                    title: 'Expenses & Payroll',
                                     amount: pnl.totalExpenses.format(),
                                     subtitle: 'Salaries, stock & operating expenses',
                                     color: isDark ? const Color(0xFFF87171) : AppColors.overdue,
@@ -294,7 +294,7 @@ class DashboardPage extends ConsumerWidget {
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: _financialStatTile(
-                                    title: 'Net Operating Balance (خالص بچت)',
+                                    title: 'Net Operating Balance',
                                     amount: pnl.netProfit.format(),
                                     subtitle: pnl.isProfitable ? 'Operational surplus' : 'Operational deficit',
                                     color: pnl.isProfitable

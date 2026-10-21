@@ -96,6 +96,18 @@ final studentsListProvider = FutureProvider<List<Student>>((ref) async {
   );
 });
 
+/// Future provider querying all students across the school (cached & reactive).
+final allStudentsProvider = FutureProvider<List<Student>>((ref) async {
+  ref.watch(studentListVersionProvider);
+  final searchUseCase = ref.watch(searchStudentsUseCaseProvider);
+  final result = await searchUseCase();
+  return result.fold(
+    onSuccess: (students) => students,
+    onFailure: (f) => throw Exception(f.message),
+  );
+});
+
+
 /// Future provider querying family groups.
 final familiesListProvider = FutureProvider<List<Family>>((ref) async {
   ref.watch(studentListVersionProvider);
@@ -124,3 +136,11 @@ final studentProfileProvider = FutureProvider.family<StudentProfile, int>((ref, 
   final db = ref.watch(appDatabaseProvider);
   return StudentProfileService.getProfile(db: db, studentId: studentId);
 });
+
+/// Batch provider querying all student profile metadata at once for fast directory views
+final allStudentProfilesProvider = FutureProvider<Map<int, StudentProfile>>((ref) async {
+  ref.watch(studentListVersionProvider);
+  final db = ref.watch(appDatabaseProvider);
+  return StudentProfileService.getAllProfiles(db);
+});
+

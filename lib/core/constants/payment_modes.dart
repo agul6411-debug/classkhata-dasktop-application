@@ -11,22 +11,22 @@ class PaymentModes {
   static const String easyPaisa = 'easypaisa';
   static const String jazzCash = 'jazzcash';
 
-  /// Returns user-facing label with English and Urdu script.
+  /// Returns user-facing label with English script.
   static String getDisplayName(String? mode) {
-    if (mode == null) return 'Hand Cash (نقد کیش)';
+    if (mode == null) return 'Hand Cash';
     final m = mode.trim().toLowerCase();
     switch (m) {
       case 'hand_cash':
       case 'cash':
-        return 'Hand Cash (نقد کیش)';
+        return 'Hand Cash';
       case 'bank':
-        return 'Bank Transfer (بینک ٹرانسفر)';
+        return 'Bank Transfer';
       case 'easypaisa':
-        return 'EasyPaisa (ایزی پیسہ)';
+        return 'EasyPaisa';
       case 'jazzcash':
-        return 'JazzCash (جاز کیش)';
+        return 'JazzCash';
       case 'online':
-        return 'Online / Mobile (آن لائن)';
+        return 'Online / Mobile';
       default:
         return mode.toUpperCase();
     }
@@ -61,7 +61,7 @@ class PaymentModes {
             children: [
               Icon(Icons.payments_outlined, size: 16, color: Color(0xFF1E40AF)),
               SizedBox(width: 8),
-              Text('Hand Cash (نقد کیش)'),
+              Text('Hand Cash'),
             ],
           ),
         ),
@@ -71,7 +71,7 @@ class PaymentModes {
             children: [
               Icon(Icons.account_balance_outlined, size: 16, color: Colors.blueGrey),
               SizedBox(width: 8),
-              Text('Bank Transfer (بینک ٹرانسفر)'),
+              Text('Bank Transfer'),
             ],
           ),
         ),
@@ -81,7 +81,7 @@ class PaymentModes {
             children: [
               Icon(Icons.phone_android_outlined, size: 16, color: Colors.green),
               SizedBox(width: 8),
-              Text('EasyPaisa (ایزی پیسہ)'),
+              Text('EasyPaisa'),
             ],
           ),
         ),
@@ -91,7 +91,7 @@ class PaymentModes {
             children: [
               Icon(Icons.mobile_friendly_outlined, size: 16, color: Colors.deepOrange),
               SizedBox(width: 8),
-              Text('JazzCash (جاز کیش)'),
+              Text('JazzCash'),
             ],
           ),
         ),

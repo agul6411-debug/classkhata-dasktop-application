@@ -2,13 +2,11 @@
 /// QR code verification, and clipboard integration.
 library;
 
-import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/constants/payment_modes.dart';
@@ -631,28 +629,6 @@ class _ReceiptDialogState extends State<ReceiptDialog> {
                                 ],
 
                                 const SizedBox(height: 12),
-                                // Verification QR Code
-                                Center(
-                                  child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: const Color(0xFFCBD5E1)),
-                                    ),
-                                    child: QrImageView(
-                                      data: effectiveQrData,
-                                      size: 85,
-                                      backgroundColor: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'Scan to verify authentic fee voucher entry',
-                                  style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B)),
-                                ),
-                                const SizedBox(height: 6),
                                 if (widget.academyPhone != null && widget.academyPhone!.isNotEmpty)
                                   Text(
                                     '📞 ${widget.academyPhone}',

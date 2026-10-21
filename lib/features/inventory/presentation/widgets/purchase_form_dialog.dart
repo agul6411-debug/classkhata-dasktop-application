@@ -347,7 +347,7 @@ class _PurchaseFormDialogState extends ConsumerState<PurchaseFormDialog> {
                               children: [
                                 Icon(Icons.credit_card_off_outlined, size: 16, color: Colors.purple),
                                 SizedBox(width: 8),
-                                Text('On Credit (ادھار / بعد میں ادائیگی)'),
+                                Text('On Credit (Pay Later)'),
                               ],
                             ),
                           ),

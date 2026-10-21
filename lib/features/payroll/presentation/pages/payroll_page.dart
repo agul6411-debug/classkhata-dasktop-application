@@ -3,16 +3,25 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf/pdf.dart';
+import '../../../../app/providers.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../../../core/money/money.dart';
+import '../../../../core/printing/pdf_document_service.dart';
 import '../../../../core/security/permission_service.dart';
+import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../domain/entities/payroll_entities.dart';
+import '../../domain/entities/staff_profile.dart';
+import '../../domain/services/staff_profile_service.dart';
 import '../providers/payroll_providers.dart';
 import '../widgets/advance_form_dialog.dart';
 import '../widgets/payslip_dialog.dart';
 import '../widgets/staff_form_dialog.dart';
+import '../widgets/staff_terms_editor_dialog.dart';
 
 class PayrollPage extends ConsumerStatefulWidget {
   const PayrollPage({super.key});
@@ -24,6 +33,7 @@ class PayrollPage extends ConsumerStatefulWidget {
 class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   bool _isGeneratingRuns = false;
+  String _payrollFilter = 'all'; // 'all', 'paid', 'pending'
 
   @override
   void initState() {
@@ -35,6 +45,48 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _openAddStaffDialog() async {
+    final result = await showDialog<dynamic>(
+      context: context,
+      builder: (_) => const StaffFormDialog(),
+    );
+    if (result is Map && result['print'] == true) {
+      final staff = result['staff'] as StaffMember;
+      final profile = result['profile'] as StaffProfile;
+      if (mounted) {
+        _printStaffDossier(staff, profile);
+      }
+    }
+  }
+
+  Future<void> _printStaffDossier(StaffMember staff, [StaffProfile? profile]) async {
+    final db = ref.read(appDatabaseProvider);
+    final loadedProfile = profile ?? await StaffProfileService.getProfile(db: db, staffId: staff.id);
+    final academy = ref.read(academyProfileProvider).valueOrNull;
+    final schoolTerms = await StaffProfileService.getSchoolTerms(db);
+
+    if (!mounted) return;
+
+    PdfPrintPreviewDialog.show(
+      context,
+      title: 'Staff Dossier & Employment Agreement (${staff.staffCode})',
+      pdfFileName: 'Staff_${staff.staffCode}_Dossier.pdf',
+      initialFormat: PdfPageFormat.a4,
+      pageFormats: {'A4': PdfPageFormat.a4},
+      buildPdf: (format) => PdfDocumentService.generateStaffJoiningDossierPdf(
+        staff: staff,
+        profile: loadedProfile,
+        academyName: academy?.name ?? 'ClassKhata Academy',
+        academyTagline: academy?.tagline,
+        academyPhone: academy?.phone,
+        academyAddress: academy?.address,
+        logoPath: academy?.logoPath,
+        schoolTerms: schoolTerms,
+        format: format,
+      ),
+    );
   }
 
   Future<void> _runMonthlyPayroll() async {
@@ -105,6 +157,19 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
                 Row(
                   children: [
                     OutlinedButton.icon(
+                      icon: const Icon(Icons.gavel, size: 16),
+                      label: const Text('Staff Terms & Rules'),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.accent),
+                        foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.accent,
+                      ),
+                      onPressed: () => showDialog<bool>(
+                        context: context,
+                        builder: (_) => const StaffTermsEditorDialog(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
                       icon: const Icon(Icons.money_off, size: 16),
                       label: const Text('Issue Advance'),
                       style: OutlinedButton.styleFrom(
@@ -120,10 +185,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
                     PrimaryButton(
                       label: 'Add Staff Member',
                       icon: Icons.person_add,
-                      onPressed: () => showDialog<bool>(
-                        context: context,
-                        builder: (_) => const StaffFormDialog(),
-                      ),
+                      onPressed: _openAddStaffDialog,
                     ),
                   ],
                 ),
@@ -174,130 +236,416 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
   Widget _buildPayrollRegisterTab() {
     final runsAsync = ref.watch(payrollRunsListProvider);
     final selectedMonth = ref.watch(selectedPayrollMonthProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headingColor = isDark ? AppColors.darkTextPrimary : AppColors.heading;
+    final textMutedColor = isDark ? AppColors.darkTextSecondary : AppColors.textMuted;
 
-    return Column(
-      children: [
-        // Filter bar
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.cardBg(context),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.borderCol(context)),
-              ),
-              child: Row(
-                children: [
-                  const Text('Month: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  DropdownButton<String>(
-                    value: selectedMonth,
-                    underline: const SizedBox.shrink(),
-                    items: List.generate(6, (i) {
-                      final dt = DateTime.now().subtract(Duration(days: 30 * i));
-                      final val = '${dt.year}-${dt.month.toString().padLeft(2, '0')}';
-                      return DropdownMenuItem(value: val, child: Text(val));
-                    }),
-                    onChanged: (val) {
-                      if (val != null) {
-                        ref.read(selectedPayrollMonthProvider.notifier).state = val;
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            ElevatedButton.icon(
-              icon: _isGeneratingRuns
-                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.calculate, size: 16),
-              label: const Text('Run Monthly Payroll'),
-              onPressed: _isGeneratingRuns ? null : _runMonthlyPayroll,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
+    return runsAsync.when(
+      data: (runs) {
+        // Compute payroll metrics
+        int totalPayrollPaisa = 0;
+        int totalGrossPaisa = 0;
+        int totalPaidPaisa = 0;
+        int totalPendingPaisa = 0;
+        int totalAdvanceRecoveryPaisa = 0;
+        int paidCount = 0;
+        int pendingCount = 0;
 
-        // Table
-        Expanded(
-          child: runsAsync.when(
-            data: (runs) {
-              if (runs.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.request_quote_outlined, size: 48, color: AppColors.textMuted),
-                      const SizedBox(height: 12),
-                      Text('No payroll generated for $selectedMonth yet.', style: const TextStyle(color: AppColors.textMuted)),
-                      const SizedBox(height: 8),
-                      TextButton(onPressed: _runMonthlyPayroll, child: const Text('Generate Payroll for this Month')),
-                    ],
-                  ),
-                );
-              }
+        for (final r in runs) {
+          totalGrossPaisa += (r.baseSalary + r.allowances).paisa;
+          totalPayrollPaisa += r.netSalary.paisa;
+          totalAdvanceRecoveryPaisa += r.advanceRecovery.paisa;
+          if (r.isPaid) {
+            totalPaidPaisa += r.netSalary.paisa;
+            paidCount++;
+          } else {
+            totalPendingPaisa += r.netSalary.paisa;
+            pendingCount++;
+          }
+        }
 
-              return Container(
+        final displayedRuns = runs.where((r) {
+          if (_payrollFilter == 'paid') return r.isPaid;
+          if (_payrollFilter == 'pending') return !r.isPaid;
+          return true;
+        }).toList();
+
+        Widget buildKpiCard({
+          required String title,
+          required String value,
+          required String subtitle,
+          required IconData icon,
+          required Color color,
+          VoidCallback? onTap,
+          bool isSelected = false,
+        }) {
+          return Expanded(
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: AppColors.cardBg(context),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.borderCol(context)),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isSelected ? color : AppColors.borderCol(context),
+                    width: isSelected ? 1.8 : 1.0,
+                  ),
+                  boxShadow: [
+                    if (isSelected)
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.12),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                  ],
                 ),
-                child: SingleChildScrollView(
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('Staff Name', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Designation', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Base Pay', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Allowances', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Deductions', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Adv. Recovered', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Net Pay', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-                      DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
-                    ],
-                    rows: runs.map((run) {
-                      return DataRow(
-                        cells: [
-                          DataCell(Text(run.staffName, style: const TextStyle(fontWeight: FontWeight.w600))),
-                          DataCell(Text(run.designation)),
-                          DataCell(Text(run.baseSalary.format())),
-                          DataCell(Text(run.allowances.format())),
-                          DataCell(Text(run.deductions.format())),
-                          DataCell(Text(run.advanceRecovery.format())),
-                          DataCell(Text(run.netSalary.format(), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent))),
-                          DataCell(StatusBadge(
-                            label: run.status.toUpperCase(),
-                            type: run.isPaid ? StatusBadgeType.paid : StatusBadgeType.pending,
-                          )),
-                          DataCell(
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.receipt_long, size: 18, color: AppColors.accent),
-                                  tooltip: 'View / Print Payslip',
-                                  onPressed: () => showDialog<bool>(
-                                    context: context,
-                                    builder: (_) => PayslipDialog(run: run),
-                                  ),
-                                ),
-                              ],
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(icon, color: color, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: textMutedColor,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            value,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: headingColor,
                             ),
                           ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: color,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
-                      );
-                    }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          children: [
+            // Top Analytics KPI Summary Cards
+            Row(
+              children: [
+                buildKpiCard(
+                  title: 'Total Monthly Payroll',
+                  value: Money(totalPayrollPaisa).format(),
+                  subtitle: 'Total Payable (${runs.length} Staff)',
+                  icon: Icons.account_balance_wallet_outlined,
+                  color: AppColors.accent,
+                  onTap: () => setState(() => _payrollFilter = 'all'),
+                  isSelected: _payrollFilter == 'all',
+                ),
+                const SizedBox(width: 12),
+                buildKpiCard(
+                  title: 'Paid Salaries',
+                  value: Money(totalPaidPaisa).format(),
+                  subtitle: '$paidCount Staff Paid (Mil Chuki)',
+                  icon: Icons.check_circle_outline,
+                  color: Colors.green,
+                  onTap: () => setState(() => _payrollFilter = 'paid'),
+                  isSelected: _payrollFilter == 'paid',
+                ),
+                const SizedBox(width: 12),
+                buildKpiCard(
+                  title: 'Pending Disbursement',
+                  value: Money(totalPendingPaisa).format(),
+                  subtitle: '$pendingCount Staff Pending (Baqaya)',
+                  icon: Icons.pending_actions_outlined,
+                  color: Colors.orange.shade800,
+                  onTap: () => setState(() => _payrollFilter = 'pending'),
+                  isSelected: _payrollFilter == 'pending',
+                ),
+                const SizedBox(width: 12),
+                buildKpiCard(
+                  title: 'Advance Deductions',
+                  value: Money(totalAdvanceRecoveryPaisa).format(),
+                  subtitle: 'Total Recovered from Advance',
+                  icon: Icons.price_check_outlined,
+                  color: Colors.deepPurple,
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Controls & Filter Bar
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBg(context),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.borderCol(context)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_month, size: 16, color: AppColors.accent),
+                          const SizedBox(width: 8),
+                          const Text('Payroll Month: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          DropdownButton<String>(
+                            value: selectedMonth,
+                            underline: const SizedBox.shrink(),
+                            items: List.generate(12, (i) {
+                              final dt = DateTime.now().subtract(Duration(days: 30 * i));
+                              final val = '${dt.year}-${dt.month.toString().padLeft(2, '0')}';
+                              return DropdownMenuItem(value: val, child: Text(val));
+                            }),
+                            onChanged: (val) {
+                              if (val != null) {
+                                ref.read(selectedPayrollMonthProvider.notifier).state = val;
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      icon: _isGeneratingRuns
+                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.calculate, size: 16),
+                      label: const Text('Run Monthly Payroll'),
+                      onPressed: _isGeneratingRuns ? null : _runMonthlyPayroll,
+                    ),
+                  ],
+                ),
+                // Status Filter Segment
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBg(context),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.borderCol(context)),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildFilterChip('All (${runs.length})', 'all'),
+                      _buildFilterChip('Paid ($paidCount)', 'paid'),
+                      _buildFilterChip('Pending ($pendingCount)', 'pending'),
+                    ],
                   ),
                 ),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => Center(child: Text('Error loading payroll: $err', style: const TextStyle(color: Colors.red))),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Table Body
+            Expanded(
+              child: runs.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.request_quote_outlined, size: 48, color: AppColors.textMuted),
+                          const SizedBox(height: 12),
+                          Text('No payroll generated for $selectedMonth yet.', style: const TextStyle(color: AppColors.textMuted)),
+                          const SizedBox(height: 8),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.play_arrow, size: 16),
+                            label: const Text('Generate Payroll for this Month'),
+                            onPressed: _runMonthlyPayroll,
+                          ),
+                        ],
+                      ),
+                    )
+                  : displayedRuns.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.filter_list_off, size: 40, color: AppColors.textMuted),
+                              const SizedBox(height: 8),
+                              Text('No records matching the "$_payrollFilter" filter.', style: const TextStyle(color: AppColors.textMuted)),
+                              const SizedBox(height: 6),
+                              TextButton(
+                                onPressed: () => setState(() => _payrollFilter = 'all'),
+                                child: const Text('Show All Records'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.cardBg(context),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.borderCol(context)),
+                          ),
+                          child: SingleChildScrollView(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: DataTable(
+                                columns: const [
+                                  DataColumn(label: Text('Staff Name', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text('Designation', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text('Base Pay', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text('Allowances', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text('Deductions', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text('Adv. Deducted', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text('Net Pay', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text('Payment Date', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
+                                ],
+                                rows: displayedRuns.map((run) {
+                                  return DataRow(
+                                    cells: [
+                                      DataCell(Text(run.staffName, style: const TextStyle(fontWeight: FontWeight.w600))),
+                                      DataCell(Text(run.designation)),
+                                      DataCell(Text(run.baseSalary.format())),
+                                      DataCell(Text(run.allowances.format())),
+                                      DataCell(Text(run.deductions.format())),
+                                      // Advance Recovery Highlight Badge
+                                      DataCell(
+                                        run.advanceRecovery.paisa > 0
+                                            ? Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.deepPurple.withValues(alpha: 0.12),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  border: Border.all(color: Colors.deepPurple.shade200),
+                                                ),
+                                                child: Text(
+                                                  '- ${run.advanceRecovery.format()}',
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurple, fontSize: 12),
+                                                ),
+                                              )
+                                            : const Text('-', style: TextStyle(color: AppColors.textMuted)),
+                                      ),
+                                      DataCell(Text(run.netSalary.format(), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent))),
+                                      DataCell(StatusBadge(
+                                        label: run.status.toUpperCase(),
+                                        type: run.isPaid ? StatusBadgeType.paid : StatusBadgeType.pending,
+                                      )),
+                                      // Payment Date Column (User Requested: kon c date ko salary mili)
+                                      DataCell(
+                                        run.isPaid && run.paidAt != null
+                                            ? Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.event_available, size: 14, color: Colors.green),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${run.paidAt!.day.toString().padLeft(2, '0')}/${run.paidAt!.month.toString().padLeft(2, '0')}/${run.paidAt!.year}',
+                                                    style: TextStyle(fontWeight: FontWeight.w600, color: Colors.green.shade800),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '(${run.paymentMode?.toUpperCase() ?? "CASH"})',
+                                                    style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                                                  ),
+                                                ],
+                                              )
+                                            : Text(
+                                                'Pending / Unpaid',
+                                                style: TextStyle(fontSize: 12, color: Colors.orange.shade800, fontStyle: FontStyle.italic),
+                                              ),
+                                      ),
+                                      // Actions Column (Pay Salary button + Payslip)
+                                      DataCell(
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (!run.isPaid) ...[
+                                              FilledButton.icon(
+                                                icon: const Icon(Icons.payments_outlined, size: 13),
+                                                label: const Text('Pay Salary', style: TextStyle(fontSize: 11)),
+                                                style: FilledButton.styleFrom(
+                                                  backgroundColor: Colors.green.shade700,
+                                                  foregroundColor: Colors.white,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                  minimumSize: const Size(0, 30),
+                                                ),
+                                                onPressed: () => showDialog<bool>(
+                                                  context: context,
+                                                  builder: (_) => PayslipDialog(run: run),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                            ],
+                                            IconButton(
+                                              icon: const Icon(Icons.receipt_long, size: 18, color: AppColors.accent),
+                                              tooltip: 'View / Print Payslip',
+                                              onPressed: () => showDialog<bool>(
+                                                context: context,
+                                                builder: (_) => PayslipDialog(run: run),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+                        ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(child: Text('Error loading payroll: $err', style: const TextStyle(color: Colors.red))),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value) {
+    final isSelected = _payrollFilter == value;
+    return InkWell(
+      onTap: () => setState(() => _payrollFilter = value),
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accent : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.white : AppColors.textMuted,
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -319,7 +667,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
                 const Text('No staff members registered yet.', style: TextStyle(color: AppColors.textMuted)),
                 const SizedBox(height: 8),
                 TextButton(
-                  onPressed: () => showDialog<bool>(context: context, builder: (_) => const StaffFormDialog()),
+                  onPressed: _openAddStaffDialog,
                   child: const Text('Add First Staff Member'),
                 ),
               ],
@@ -343,6 +691,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
                 DataColumn(label: Text('CNIC', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Joined Date', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
               ],
               rows: staffList.map((s) {
                 return DataRow(
@@ -357,6 +706,18 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
                       label: s.status.name.toUpperCase(),
                       type: s.status == StaffStatus.active ? StatusBadgeType.active : StatusBadgeType.inactive,
                     )),
+                    DataCell(
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.print, size: 18, color: AppColors.accent),
+                            tooltip: 'Print 2-Page Registration Dossier & Agreement',
+                            onPressed: () => _printStaffDossier(s),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 );
               }).toList(),

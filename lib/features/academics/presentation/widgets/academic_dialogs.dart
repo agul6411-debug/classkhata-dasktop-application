@@ -11,6 +11,7 @@ import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../../../payroll/presentation/providers/payroll_providers.dart';
+import '../../../../core/errors/failures.dart';
 import '../../domain/entities/academic_entities.dart';
 import '../providers/academic_providers.dart';
 
@@ -248,6 +249,8 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
   final _nameCtrl = TextEditingController();
   final _codeCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
+  final _sectionNameCtrl = TextEditingController(text: 'Section A');
+  final _feeCtrl = TextEditingController(text: '3500');
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -256,6 +259,8 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
     _nameCtrl.dispose();
     _codeCtrl.dispose();
     _descCtrl.dispose();
+    _sectionNameCtrl.dispose();
+    _feeCtrl.dispose();
     super.dispose();
   }
 
@@ -283,17 +288,45 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
 
     if (!mounted) return;
 
-    result.fold(
-      onSuccess: (_) {
-        ref.invalidate(academicDataProvider);
-        ref.invalidate(dashboardKpisProvider);
-        Navigator.of(context).pop(true);
-      },
-      onFailure: (f) => setState(() {
+    if (result case Success(:final value)) {
+      final course = value;
+      final secName = _sectionNameCtrl.text.trim();
+      if (secName.isNotEmpty) {
+        final feeRupees = double.tryParse(_feeCtrl.text.trim()) ?? 3500;
+        final batchUseCase = ref.read(createBatchUseCaseProvider);
+        final acadData = ref.read(academicDataProvider).valueOrNull;
+        int sessionId = acadData?.currentSession?.id ??
+            ((acadData?.sessions.isNotEmpty ?? false) ? acadData!.sessions.first.id : 1);
+        if (acadData == null || acadData.sessions.isEmpty) {
+          final sUseCase = ref.read(createSessionUseCaseProvider);
+          final now = DateTime.now();
+          final sRes = await sUseCase(
+            name: '${now.year}-${now.year + 1}',
+            startDate: now,
+            endDate: now.add(const Duration(days: 365)),
+            isCurrent: true,
+            createdBy: currentUser?.id ?? 1,
+          );
+          sessionId = sRes.fold(onSuccess: (s) => s.id, onFailure: (_) => 1);
+        }
+        await batchUseCase(
+          sessionId: sessionId,
+          courseId: course.id,
+          name: secName,
+          monthlyFee: Money.fromRupees(feeRupees),
+          dueDay: 10,
+          createdBy: currentUser?.id ?? 1,
+        );
+      }
+      ref.invalidate(academicDataProvider);
+      ref.invalidate(dashboardKpisProvider);
+      if (mounted) Navigator.of(context).pop(true);
+    } else if (result case Failure(:final failure)) {
+      setState(() {
         _isLoading = false;
-        _errorMessage = f.message;
-      }),
-    );
+        _errorMessage = failure.message;
+      });
+    }
   }
 
   @override
@@ -317,13 +350,32 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
               ],
               AppTextField(
                 controller: _nameCtrl,
-                label: 'Class Name (e.g. Class 9, Grade 10, Matric Science) *',
+                label: 'Class Name (e.g. Class 1, Class 9, Nursery) *',
                 autofocus: true,
               ),
               const SizedBox(height: 12),
               AppTextField(
                 controller: _codeCtrl,
-                label: 'Class Code / Level (e.g. 9, 10, CL-09)',
+                label: 'Class Code / Level (e.g. 1, 9, NUR)',
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppTextField(
+                      controller: _sectionNameCtrl,
+                      label: 'Initial Section (e.g. Section A)',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: AppTextField(
+                      controller: _feeCtrl,
+                      label: 'Monthly Fee (Rs.)',
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               AppTextField(
@@ -397,8 +449,8 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
   }
 
   Future<void> _submit() async {
-    if (_selectedSessionId == null || _selectedCourseId == null) {
-      setState(() => _errorMessage = 'Please select both session and class.');
+    if (_selectedCourseId == null) {
+      setState(() => _errorMessage = 'Please select a school class.');
       return;
     }
     final name = _nameCtrl.text.trim();
@@ -423,12 +475,28 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
     final currentUser = ref.read(authSessionNotifierProvider);
     final useCase = ref.read(createBatchUseCaseProvider);
 
+    // Auto-resolve session silently without burdening the user
+    final acadData = ref.read(academicDataProvider).valueOrNull;
+    int sessionId = _selectedSessionId ?? (acadData?.currentSession?.id ?? (acadData?.sessions.isNotEmpty == true ? acadData!.sessions.first.id : 1));
+    if (acadData == null || acadData.sessions.isEmpty) {
+      final sUseCase = ref.read(createSessionUseCaseProvider);
+      final now = DateTime.now();
+      final sRes = await sUseCase(
+        name: '${now.year}-${now.year + 1}',
+        startDate: now,
+        endDate: now.add(const Duration(days: 365)),
+        isCurrent: true,
+        createdBy: currentUser?.id ?? 1,
+      );
+      sessionId = sRes.fold(onSuccess: (s) => s.id, onFailure: (_) => 1);
+    }
+
     final instructor = _isCustomTeacher
         ? _instructorCtrl.text.trim()
         : (_selectedTeacherName ?? (_instructorCtrl.text.trim().isEmpty ? null : _instructorCtrl.text.trim()));
 
     final result = await useCase(
-      sessionId: _selectedSessionId!,
+      sessionId: sessionId,
       courseId: _selectedCourseId!,
       name: name,
       instructorName: (instructor != null && instructor.isNotEmpty) ? instructor : null,
@@ -476,35 +544,16 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
               ],
               academicDataAsync.when(
                 data: (data) {
-                  // Ensure default selections
-                  final currentSession = data.currentSession;
-                  _selectedSessionId ??= currentSession?.id ?? (data.sessions.isNotEmpty ? data.sessions.first.id : null);
                   _selectedCourseId ??= widget.initialCourseId ?? (data.courses.isNotEmpty ? data.courses.first.id : null);
-
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _selectedSessionId,
-                          decoration: const InputDecoration(labelText: 'Academic Session *'),
-                          items: data.sessions.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                          onChanged: (val) => setState(() => _selectedSessionId = val),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _selectedCourseId,
-                          decoration: const InputDecoration(labelText: 'School Class *'),
-                          items: data.courses.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                          onChanged: (val) => setState(() => _selectedCourseId = val),
-                        ),
-                      ),
-                    ],
+                  return DropdownButtonFormField<int>(
+                    initialValue: _selectedCourseId,
+                    decoration: const InputDecoration(labelText: 'School Class / Grade *'),
+                    items: data.courses.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                    onChanged: (val) => setState(() => _selectedCourseId = val),
                   );
                 },
                 loading: () => const LinearProgressIndicator(),
-                error: (_, __) => const Text('Failed to load academic options'),
+                error: (_, __) => const Text('Failed to load classes'),
               ),
               const SizedBox(height: 12),
               AppTextField(
