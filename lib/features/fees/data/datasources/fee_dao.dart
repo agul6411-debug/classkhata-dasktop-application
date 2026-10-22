@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/money/money.dart';
 import '../../../../core/security/audit_chain.dart';
+import '../../../students/domain/services/student_profile_service.dart';
 import '../../domain/entities/fee_entities.dart';
 
 class FeeDao {
@@ -96,6 +97,21 @@ class FeeDao {
               amountPaisa: amountPaisa,
               paymentMode: Value(paymentMode),
               referenceNumber: Value(referenceNumber),
+              createdBy: Value(createdBy),
+            ),
+          );
+
+      // 4b. Insert Cash Book Inflow
+      final student = await (_db.select(_db.studentsTable)..where((t) => t.id.equals(studentId))).getSingleOrNull();
+      await _db.into(_db.cashBookEntriesTable).insert(
+            CashBookEntriesTableCompanion.insert(
+              entryType: 'inflow',
+              category: 'fee_payment',
+              amountPaisa: amountPaisa,
+              description: 'Fee collection: $receiptNumber (${student?.name ?? "Student #$studentId"})',
+              paymentMode: Value(paymentMode),
+              referenceId: Value(paymentId),
+              entryDate: Value(DateTime.now()),
               createdBy: Value(createdBy),
             ),
           );
@@ -252,8 +268,11 @@ class FeeDao {
           carryForward += (pv.totalDuePaisa - pv.amountPaidPaisa);
         }
 
+        final profile = await StudentProfileService.getProfile(db: _db, studentId: student.id);
+        final discountPaisa = profile.monthlyDiscount * 100;
         final baseAmount = batch.monthlyFeePaisa;
-        final totalDue = baseAmount + carryForward;
+        final netDue = (baseAmount + carryForward) - discountPaisa;
+        final totalDue = netDue > 0 ? netDue : 0;
         final vchNumber = 'VCH-$monthYear-${student.id.toString().padLeft(4, '0')}';
 
         await _db.into(_db.feeVouchersTable).insert(
@@ -266,6 +285,7 @@ class FeeDao {
                 dueDate: dueDate,
                 baseAmountPaisa: Value(baseAmount),
                 carryForwardPaisa: Value(carryForward),
+                discountPaisa: Value(discountPaisa),
                 totalDuePaisa: Value(totalDue),
                 amountPaidPaisa: const Value(0),
                 status: const Value('unpaid'),

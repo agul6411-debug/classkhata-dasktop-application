@@ -121,6 +121,7 @@ class FinanceDao {
             ..where((t) =>
                 t.entryType.equals('inflow') &
                 t.paymentMode.equals('cash') &
+                t.category.isNotValue('fee_payment') &
                 t.entryDate.isBiggerOrEqualValue(startOfDay) &
                 t.entryDate.isSmallerOrEqualValue(endOfDay)))
           .get();
