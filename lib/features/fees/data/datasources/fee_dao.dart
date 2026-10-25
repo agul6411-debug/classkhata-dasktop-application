@@ -270,7 +270,9 @@ class FeeDao {
 
         final profile = await StudentProfileService.getProfile(db: _db, studentId: student.id);
         final discountPaisa = profile.monthlyDiscount * 100;
-        final baseAmount = batch.monthlyFeePaisa;
+        final baseAmount = (profile.customMonthlyFee != null && profile.customMonthlyFee! > 0)
+            ? profile.customMonthlyFee! * 100
+            : batch.monthlyFeePaisa;
         final netDue = (baseAmount + carryForward) - discountPaisa;
         final totalDue = netDue > 0 ? netDue : 0;
         final vchNumber = 'VCH-$monthYear-${student.id.toString().padLeft(4, '0')}';

@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../providers/inventory_providers.dart';
 
 class PurchaseFormDialog extends ConsumerStatefulWidget {
@@ -120,6 +121,7 @@ class _PurchaseFormDialogState extends ConsumerState<PurchaseFormDialog> {
         ref.invalidate(inventoryItemsProvider);
         ref.invalidate(inventoryMovementsProvider);
         ref.invalidate(stockValuationProvider);
+        ref.invalidate(dashboardProfitLossProvider);
         Navigator.of(context).pop(true);
       },
       onFailure: (f) => setState(() {

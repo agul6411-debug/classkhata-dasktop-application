@@ -14,6 +14,7 @@ class StudentProfile extends Equatable {
     this.dob,
     this.bloodGroup,
     this.address,
+    this.customMonthlyFee,
     this.admissionFee = 0,
     this.openingArrears = 0,
     this.monthlyDiscount = 0,
@@ -28,6 +29,7 @@ class StudentProfile extends Equatable {
   final String? dob;
   final String? bloodGroup;
   final String? address;
+  final int? customMonthlyFee; // in Rupees, student-specific agreed monthly tuition fee
   final int admissionFee; // in Rupees
   final int openingArrears; // in Rupees
   final int monthlyDiscount; // in Rupees
@@ -42,6 +44,7 @@ class StudentProfile extends Equatable {
         'dob': dob,
         'bloodGroup': bloodGroup,
         'address': address,
+        'customMonthlyFee': customMonthlyFee,
         'admissionFee': admissionFee,
         'openingArrears': openingArrears,
         'monthlyDiscount': monthlyDiscount,
@@ -57,6 +60,7 @@ class StudentProfile extends Equatable {
         dob: json['dob'] as String?,
         bloodGroup: json['bloodGroup'] as String?,
         address: json['address'] as String?,
+        customMonthlyFee: (json['customMonthlyFee'] as num?)?.toInt(),
         admissionFee: (json['admissionFee'] as num?)?.toInt() ?? 0,
         openingArrears: (json['openingArrears'] as num?)?.toInt() ?? 0,
         monthlyDiscount: (json['monthlyDiscount'] as num?)?.toInt() ?? 0,
@@ -83,6 +87,7 @@ class StudentProfile extends Equatable {
     String? dob,
     String? bloodGroup,
     String? address,
+    int? customMonthlyFee,
     int? admissionFee,
     int? openingArrears,
     int? monthlyDiscount,
@@ -97,6 +102,7 @@ class StudentProfile extends Equatable {
       dob: dob ?? this.dob,
       bloodGroup: bloodGroup ?? this.bloodGroup,
       address: address ?? this.address,
+      customMonthlyFee: customMonthlyFee ?? this.customMonthlyFee,
       admissionFee: admissionFee ?? this.admissionFee,
       openingArrears: openingArrears ?? this.openingArrears,
       monthlyDiscount: monthlyDiscount ?? this.monthlyDiscount,
@@ -114,6 +120,7 @@ class StudentProfile extends Equatable {
         dob,
         bloodGroup,
         address,
+        customMonthlyFee,
         admissionFee,
         openingArrears,
         monthlyDiscount,

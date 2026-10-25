@@ -7,6 +7,8 @@ library;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
+import '../security/input_sanitizer.dart';
+
 enum LogLevel { debug, info, warning, error, critical }
 
 class AppLogger {
@@ -55,8 +57,10 @@ class AppLogger {
   }) async {
     final timestamp = DateTime.now().toIso8601String();
     final levelStr = level.name.toUpperCase().padRight(8);
-    final lines = StringBuffer('[$timestamp] [$levelStr] $message');
-    if (error != null) lines.write('\n  Error: $error');
+    final safeMessage = InputSanitizer.maskSensitiveData(message);
+    final safeError = error != null ? InputSanitizer.maskSensitiveData(error.toString()) : null;
+    final lines = StringBuffer('[$timestamp] [$levelStr] $safeMessage');
+    if (safeError != null) lines.write('\n  Error: $safeError');
     if (stack != null) lines.write('\n  Stack: $stack');
     final line = '${lines.toString()}\n';
 

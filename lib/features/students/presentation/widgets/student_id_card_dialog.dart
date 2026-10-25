@@ -5,8 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/printing/pdf_document_service.dart';
-import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
+
 import '../../domain/entities/student_entities.dart';
 import '../providers/student_providers.dart';
 
@@ -160,37 +159,12 @@ class StudentIdCardDialog extends ConsumerWidget {
                   color: Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Close'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.print, size: 16),
-                        label: const Text('Print Card'),
-                        onPressed: () {
-                          PdfPrintPreviewDialog.show(
-                            context,
-                            title: 'Student ID Card (${student.rollNumber})',
-                            pdfFileName: 'ID_Card_${student.rollNumber}.pdf',
-                            buildPdf: (format) => PdfDocumentService.generateStudentIdCardPdf(
-                              student: student,
-                              batchName: batchName,
-                              academyName: academyName,
-                              academyPhone: academyPhone,
-                              academyAddress: academyAddress,
-                              format: format,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Close'),
+                  ),
                 ),
               ),
             ],

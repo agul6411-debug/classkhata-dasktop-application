@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../../../core/security/input_sanitizer.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../academics/presentation/providers/academic_providers.dart';
@@ -60,10 +61,16 @@ class _StudentImportDialogState extends ConsumerState<StudentImportDialog> {
       final parts = trimmed.split(',').map((p) => p.trim()).toList();
       if (parts.isEmpty || parts[0].isEmpty) continue;
 
-      final name = parts[0];
-      final guardianPhone = parts.length > 1 && parts[1].isNotEmpty ? parts[1] : 'N/A';
-      final phone = parts.length > 2 && parts[2].isNotEmpty ? parts[2] : null;
-      final email = parts.length > 3 && parts[3].isNotEmpty ? parts[3] : null;
+      final name = InputSanitizer.sanitizeText(parts[0], maxLength: 100);
+      final guardianPhone = parts.length > 1 && parts[1].isNotEmpty
+          ? InputSanitizer.sanitizeText(parts[1], maxLength: 25)
+          : 'N/A';
+      final phone = parts.length > 2 && parts[2].isNotEmpty
+          ? InputSanitizer.sanitizeText(parts[2], maxLength: 25)
+          : null;
+      final email = parts.length > 3 && parts[3].isNotEmpty
+          ? InputSanitizer.sanitizeText(parts[3], maxLength: 100)
+          : null;
 
       rows.add(StudentImportRow(
         name: name,

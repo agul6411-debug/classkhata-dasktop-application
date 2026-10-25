@@ -10,6 +10,7 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../../../fees/domain/entities/fee_entities.dart';
 import '../../../fees/presentation/providers/fee_providers.dart';
 import '../../../payroll/domain/entities/payroll_entities.dart';
@@ -115,8 +116,10 @@ class _ItemIssuanceDialogState extends ConsumerState<ItemIssuanceDialog> {
         ref.invalidate(inventoryItemsProvider);
         ref.invalidate(inventoryMovementsProvider);
         ref.invalidate(stockValuationProvider);
+        ref.invalidate(dashboardProfitLossProvider);
         if (_chargeVoucher) {
           ref.invalidate(vouchersListProvider);
+          ref.invalidate(dashboardKpisProvider);
         }
         Navigator.of(context).pop(true);
       },

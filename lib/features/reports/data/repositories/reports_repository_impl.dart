@@ -404,6 +404,14 @@ class ReportsRepositoryImpl implements ReportsRepository {
               t.isCancelled.equals(false)))
         .get();
 
+    final otherInflows = await (_db.select(_db.cashBookEntriesTable)
+          ..where((t) =>
+              t.entryType.equals('inflow') &
+              t.category.isNotValue('fee_payment') &
+              t.entryDate.isBiggerOrEqualValue(start) &
+              t.entryDate.isSmallerOrEqualValue(end)))
+        .get();
+
     final outflows = await (_db.select(_db.cashBookEntriesTable)
           ..where((t) =>
               t.entryType.equals('outflow') &
@@ -411,10 +419,22 @@ class ReportsRepositoryImpl implements ReportsRepository {
               t.entryDate.isSmallerOrEqualValue(end)))
         .get();
 
-    int totalIncomePaisa = 0;
+    int feeIncomePaisa = 0;
     for (final r in receipts) {
-      totalIncomePaisa += r.amountPaisa;
+      feeIncomePaisa += r.amountPaisa;
     }
+
+    int storeSalesPaisa = 0;
+    int otherIncomePaisa = 0;
+    for (final inf in otherInflows) {
+      if (inf.category == 'inventory_sale') {
+        storeSalesPaisa += inf.amountPaisa;
+      } else {
+        otherIncomePaisa += inf.amountPaisa;
+      }
+    }
+
+    final totalIncomePaisa = feeIncomePaisa + storeSalesPaisa + otherIncomePaisa;
 
     // Group expenses by category
     final expenseCatTotals = <String, int>{};
@@ -426,7 +446,13 @@ class ReportsRepositoryImpl implements ReportsRepository {
     }
 
     final rows = <List<String>>[];
-    rows.add(['Fee Revenue (Student Fees)', 'Income', '${receipts.length}', Money.fromPaisa(totalIncomePaisa).format()]);
+    rows.add(['Fee Revenue (Student Fees)', 'Income', '${receipts.length}', Money.fromPaisa(feeIncomePaisa).format()]);
+    if (storeSalesPaisa > 0) {
+      rows.add(['Store / Uniform & Book Sales', 'Income', '-', Money.fromPaisa(storeSalesPaisa).format()]);
+    }
+    if (otherIncomePaisa > 0) {
+      rows.add(['Other Operating Income', 'Income', '-', Money.fromPaisa(otherIncomePaisa).format()]);
+    }
 
     expenseCatTotals.forEach((cat, amount) {
       rows.add(['Expense: ${cat.toUpperCase()}', 'Expense', '-', Money.fromPaisa(amount).format()]);

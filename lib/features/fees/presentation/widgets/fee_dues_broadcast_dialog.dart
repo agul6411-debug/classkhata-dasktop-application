@@ -12,7 +12,6 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/money/money.dart';
 import '../../../../core/services/receipt_image_service.dart';
 import '../../../../shared/widgets/primary_button.dart';
-import '../../../academics/presentation/providers/academic_providers.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../domain/entities/fee_entities.dart';
 import 'receipt_dialog.dart';
@@ -54,7 +53,6 @@ class FeeDuesBroadcastDialog extends ConsumerStatefulWidget {
 
 class _FeeDuesBroadcastDialogState extends ConsumerState<FeeDuesBroadcastDialog> {
   final _searchCtrl = TextEditingController();
-  int? _selectedBatchId;
   final Set<int> _sentStudentIds = {};
   bool _isLoading = true;
   String? _error;
@@ -327,7 +325,6 @@ class _FeeDuesBroadcastDialogState extends ConsumerState<FeeDuesBroadcastDialog>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final academy = ref.watch(academyProfileProvider).valueOrNull;
-    final academicData = ref.watch(academicDataProvider).valueOrNull;
     final schoolName = academy?.name ?? 'School Management System';
 
     // Apply filtering

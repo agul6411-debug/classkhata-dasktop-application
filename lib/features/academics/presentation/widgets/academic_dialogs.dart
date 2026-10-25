@@ -10,6 +10,7 @@ import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../dashboard/presentation/providers/dashboard_providers.dart';
+import '../../../payroll/domain/entities/payroll_entities.dart';
 import '../../../payroll/presentation/providers/payroll_providers.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/academic_entities.dart';
@@ -250,7 +251,6 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
   final _codeCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _sectionNameCtrl = TextEditingController(text: 'Section A');
-  final _feeCtrl = TextEditingController(text: '3500');
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -260,7 +260,6 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
     _codeCtrl.dispose();
     _descCtrl.dispose();
     _sectionNameCtrl.dispose();
-    _feeCtrl.dispose();
     super.dispose();
   }
 
@@ -292,7 +291,6 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
       final course = value;
       final secName = _sectionNameCtrl.text.trim();
       if (secName.isNotEmpty) {
-        final feeRupees = double.tryParse(_feeCtrl.text.trim()) ?? 3500;
         final batchUseCase = ref.read(createBatchUseCaseProvider);
         final acadData = ref.read(academicDataProvider).valueOrNull;
         int sessionId = acadData?.currentSession?.id ??
@@ -313,7 +311,7 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
           sessionId: sessionId,
           courseId: course.id,
           name: secName,
-          monthlyFee: Money.fromRupees(feeRupees),
+          monthlyFee: const Money(0),
           dueDay: 10,
           createdBy: currentUser?.id ?? 1,
         );
@@ -359,23 +357,9 @@ class _CreateCourseDialogState extends ConsumerState<CreateCourseDialog> {
                 label: 'Class Code / Level (e.g. 1, 9, NUR)',
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppTextField(
-                      controller: _sectionNameCtrl,
-                      label: 'Initial Section (e.g. Section A)',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: AppTextField(
-                      controller: _feeCtrl,
-                      label: 'Monthly Fee (Rs.)',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
+              AppTextField(
+                controller: _sectionNameCtrl,
+                label: 'Initial Section (e.g. Section A)',
               ),
               const SizedBox(height: 12),
               AppTextField(
@@ -422,7 +406,6 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
   final _nameCtrl = TextEditingController(text: 'Section A');
   final _instructorCtrl = TextEditingController();
   final _timingCtrl = TextEditingController();
-  final _feeCtrl = TextEditingController(text: '3500');
   final _dueDayCtrl = TextEditingController(text: '10');
 
   int? _selectedSessionId;
@@ -443,7 +426,6 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
     _nameCtrl.dispose();
     _instructorCtrl.dispose();
     _timingCtrl.dispose();
-    _feeCtrl.dispose();
     _dueDayCtrl.dispose();
     super.dispose();
   }
@@ -459,7 +441,6 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
       return;
     }
 
-    final feeRupees = double.tryParse(_feeCtrl.text.trim()) ?? 0;
     final dueDay = int.tryParse(_dueDayCtrl.text.trim()) ?? 10;
 
     if (dueDay < 1 || dueDay > 28) {
@@ -477,7 +458,7 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
 
     // Auto-resolve session silently without burdening the user
     final acadData = ref.read(academicDataProvider).valueOrNull;
-    int sessionId = _selectedSessionId ?? (acadData?.currentSession?.id ?? (acadData?.sessions.isNotEmpty == true ? acadData!.sessions.first.id : 1));
+    int sessionId = _selectedSessionId ?? (acadData?.currentSession?.id ?? ((acadData?.sessions.isNotEmpty ?? false) ? acadData!.sessions.first.id : 1));
     if (acadData == null || acadData.sessions.isEmpty) {
       final sUseCase = ref.read(createSessionUseCaseProvider);
       final now = DateTime.now();
@@ -501,7 +482,7 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
       name: name,
       instructorName: (instructor != null && instructor.isNotEmpty) ? instructor : null,
       timing: _timingCtrl.text.trim().isEmpty ? null : _timingCtrl.text.trim(),
-      monthlyFee: Money.fromRupees(feeRupees),
+      monthlyFee: const Money(0),
       dueDay: dueDay,
       createdBy: currentUser?.id ?? 1,
     );
@@ -568,11 +549,26 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
                     child: ref.watch(staffListProvider).when(
                           data: (staffList) {
                             final activeTeachers = staffList.where((s) => s.status.name.toLowerCase() == 'active').toList();
+                            final seenNames = <String>{};
+                            final uniqueTeachers = <StaffMember>[];
+                            for (final s in activeTeachers) {
+                              final trimmed = s.name.trim();
+                              if (trimmed.isNotEmpty && seenNames.add(trimmed)) {
+                                uniqueTeachers.add(s);
+                              }
+                            }
+
+                            final safeValue = (_selectedTeacherName == '__CUSTOM__' ||
+                                    _selectedTeacherName == null ||
+                                    seenNames.contains(_selectedTeacherName))
+                                ? _selectedTeacherName
+                                : null;
+
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 DropdownButtonFormField<String?>(
-                                  value: _selectedTeacherName,
+                                  value: safeValue,
                                   decoration: const InputDecoration(labelText: 'Class Teacher (Staff List)'),
                                   isExpanded: true,
                                   items: [
@@ -580,9 +576,9 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
                                       value: null,
                                       child: Text('None (No Teacher Assigned)', overflow: TextOverflow.ellipsis),
                                     ),
-                                    ...activeTeachers.map((s) => DropdownMenuItem<String?>(
-                                          value: s.name,
-                                          child: Text('${s.name} (${s.designation})', overflow: TextOverflow.ellipsis),
+                                    ...uniqueTeachers.map((s) => DropdownMenuItem<String?>(
+                                          value: s.name.trim(),
+                                          child: Text('${s.name.trim()} (${s.designation})', overflow: TextOverflow.ellipsis),
                                         )),
                                     const DropdownMenuItem<String?>(
                                       value: '__CUSTOM__',
@@ -630,24 +626,10 @@ class _CreateBatchDialogState extends ConsumerState<CreateBatchDialog> {
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppTextField(
-                      controller: _feeCtrl,
-                      label: 'Monthly Tuition Fee (Rs.) *',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: AppTextField(
-                      controller: _dueDayCtrl,
-                      label: 'Fee Due Day of Month (1 - 28) *',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
+              AppTextField(
+                controller: _dueDayCtrl,
+                label: 'Fee Due Day of Month (1 - 28) *',
+                keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 24),
               Row(

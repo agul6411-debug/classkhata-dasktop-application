@@ -15,6 +15,7 @@ import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../academics/presentation/providers/academic_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../../students/domain/entities/student_entities.dart';
 import '../../../students/presentation/providers/student_providers.dart';
@@ -23,7 +24,9 @@ import '../providers/fee_providers.dart';
 import 'receipt_dialog.dart';
 
 class FeeCollectionWizard extends ConsumerStatefulWidget {
-  const FeeCollectionWizard({super.key});
+  const FeeCollectionWizard({super.key, this.initialStudent});
+
+  final Student? initialStudent;
 
   @override
   ConsumerState<FeeCollectionWizard> createState() => _FeeCollectionWizardState();
@@ -43,6 +46,15 @@ class _FeeCollectionWizardState extends ConsumerState<FeeCollectionWizard> {
   final _amountCtrl = TextEditingController();
   String _paymentMode = PaymentModes.handCash;
   final _refCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialStudent != null) {
+      _selectedStudent = widget.initialStudent;
+      _searchCtrl.text = widget.initialStudent!.name;
+    }
+  }
 
   @override
   void dispose() {
@@ -84,6 +96,8 @@ class _FeeCollectionWizardState extends ConsumerState<FeeCollectionWizard> {
       onSuccess: (data) {
         ref.invalidate(vouchersListProvider);
         ref.invalidate(defaulterAgingProvider);
+        ref.invalidate(dashboardKpisProvider);
+        ref.invalidate(dashboardProfitLossProvider);
         Navigator.of(context).pop();
 
         final academy = ref.read(academyProfileProvider).valueOrNull;

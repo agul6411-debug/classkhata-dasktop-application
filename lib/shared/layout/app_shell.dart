@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../app/theme/app_theme.dart';
+import '../../core/security/permission_service.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/backup/presentation/providers/backup_providers.dart';
 import '../../features/fees/presentation/widgets/fee_collection_wizard.dart';
@@ -312,6 +313,7 @@ class _Sidebar extends ConsumerWidget {
     final borderColor = isDark ? AppColors.darkBorder : AppColors.border;
 
     final profileAsync = ref.watch(academyProfileProvider);
+    final currentUser = ref.watch(authSessionNotifierProvider);
     final profile = profileAsync.valueOrNull;
     final logoPath = profile?.logoPath?.trim();
     final hasLogo = logoPath != null && logoPath.isNotEmpty && File(logoPath).existsSync();
@@ -397,47 +399,53 @@ class _Sidebar extends ConsumerWidget {
             route: '/dashboard',
             isActive: location.startsWith('/dashboard'),
           ),
-          _NavItem(
-            icon: Icons.school_outlined,
-            label: 'Students',
-            route: '/students',
-            isActive: location.startsWith('/students'),
-          ),
-          _NavItem(
-            icon: Icons.receipt_long_outlined,
-            label: 'Fees',
-            route: '/fees',
-            isActive: location.startsWith('/fees'),
-          ),
-          _NavItem(
-            icon: Icons.people_outlined,
-            label: 'Payroll',
-            route: '/payroll',
-            isActive: location.startsWith('/payroll'),
-          ),
-          _NavItem(
-            icon: Icons.inventory_2_outlined,
-            label: 'Inventory',
-            route: '/inventory',
-            isActive: location.startsWith('/inventory'),
-          ),
-          _NavItem(
-            icon: Icons.bar_chart_outlined,
-            label: 'Reports',
-            route: '/reports',
-            isActive: location.startsWith('/reports'),
-          ),
+          if (currentUser == null || currentUser.permissions.contains(Permission.studentsView))
+            _NavItem(
+              icon: Icons.school_outlined,
+              label: 'Students',
+              route: '/students',
+              isActive: location.startsWith('/students'),
+            ),
+          if (currentUser == null || currentUser.permissions.contains(Permission.feesView))
+            _NavItem(
+              icon: Icons.receipt_long_outlined,
+              label: 'Fees',
+              route: '/fees',
+              isActive: location.startsWith('/fees'),
+            ),
+          if (currentUser == null || currentUser.permissions.contains(Permission.payrollView))
+            _NavItem(
+              icon: Icons.people_outlined,
+              label: 'Payroll',
+              route: '/payroll',
+              isActive: location.startsWith('/payroll'),
+            ),
+          if (currentUser == null || currentUser.permissions.contains(Permission.inventoryView))
+            _NavItem(
+              icon: Icons.inventory_2_outlined,
+              label: 'Inventory',
+              route: '/inventory',
+              isActive: location.startsWith('/inventory'),
+            ),
+          if (currentUser == null || currentUser.permissions.contains(Permission.reportsView))
+            _NavItem(
+              icon: Icons.bar_chart_outlined,
+              label: 'Reports',
+              route: '/reports',
+              isActive: location.startsWith('/reports'),
+            ),
 
           const Spacer(),
           Divider(height: 1, color: borderColor),
 
-          // Settings at the bottom
-          _NavItem(
-            icon: Icons.settings_outlined,
-            label: 'Settings',
-            route: '/settings',
-            isActive: location.startsWith('/settings'),
-          ),
+          // Settings at the bottom (Admin or Settings permission)
+          if (currentUser == null || currentUser.role == AppRole.admin || currentUser.permissions.contains(Permission.settingsEdit))
+            _NavItem(
+              icon: Icons.settings_outlined,
+              label: 'Settings',
+              route: '/settings',
+              isActive: location.startsWith('/settings'),
+            ),
           const SizedBox(height: 8),
         ],
       ),

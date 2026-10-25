@@ -148,7 +148,7 @@ void main() {
       expect(batch1Students.valueOrThrow.isEmpty, isTrue);
     });
 
-    test('generates sequential gap-free roll numbers (STD-0001, STD-0002)', () async {
+    test('generates sequential gap-free numeric roll numbers (1, 2)', () async {
       final s1 = await repository.registerStudent(
         name: 'Student A',
         batchId: 1,
@@ -162,8 +162,8 @@ void main() {
         createdBy: 1,
       );
 
-      expect(s1.valueOrThrow.rollNumber, equals('STD-0001'));
-      expect(s2.valueOrThrow.rollNumber, equals('STD-0002'));
+      expect(s1.valueOrThrow.rollNumber, equals('1'));
+      expect(s2.valueOrThrow.rollNumber, equals('2'));
     });
   });
 }

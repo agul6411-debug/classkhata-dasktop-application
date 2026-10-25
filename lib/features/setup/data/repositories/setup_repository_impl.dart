@@ -32,6 +32,15 @@ class SetupRepositoryImpl implements SetupRepository {
   @override
   Future<Result<String>> runSetup(SetupData data) async {
     try {
+      // Prevent unauthorized re-initialization if already completed
+      final count = await _dao.getAcademyCount();
+      if (count > 0) {
+        await AppLogger.instance.warning('Attempted unauthorized setup re-initialization blocked.');
+        return const Failure(
+          ValidationFailure('Setup has already been completed. Unauthorized re-initialization blocked.'),
+        );
+      }
+
       // Hash admin password
       final hashResult = await PasswordHasher.instance.hashPassword(data.adminPassword);
       if (hashResult.isFailure) {

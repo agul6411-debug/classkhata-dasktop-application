@@ -12,6 +12,7 @@ import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/pdf_print_preview_dialog.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../../../settings/presentation/providers/settings_providers.dart';
 import '../../domain/entities/payroll_entities.dart';
 import '../providers/payroll_providers.dart';
@@ -56,6 +57,7 @@ class _PayslipDialogState extends ConsumerState<PayslipDialog> {
     res.fold(
       onSuccess: (_) {
         ref.invalidate(payrollRunsListProvider);
+        ref.invalidate(dashboardProfitLossProvider);
         Navigator.of(context).pop(true);
       },
       onFailure: (f) => setState(() {

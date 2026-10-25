@@ -92,5 +92,33 @@ void main() {
       final restoredContent = await dbFile.readAsString();
       expect(restoredContent, equals('SQLCipher-Encrypted-Database-Content-V1'));
     });
+
+    test('restoreFromFile restores database from external file and rejects invalid non-database file', () async {
+      // 1. Create a valid backup file
+      final externalBackupFile = File(p.join(tempDir.path, 'external_backup.db'));
+      await externalBackupFile.writeAsString('SQLCipher-Encrypted-From-Boss-PC-V2');
+
+      // 2. Reject non-database files
+      final invalidFile = File(p.join(tempDir.path, 'invalid.txt'));
+      await invalidFile.writeAsString('This is a random text file');
+      final invalidRes = await backupRepo.restoreFromFile(invalidFile);
+      expect(invalidRes.isFailure, isTrue);
+
+      // 3. Restore valid file
+      final validRes = await backupRepo.restoreFromFile(externalBackupFile);
+      expect(validRes.isSuccess, isTrue);
+
+      // 4. Active dbFile must now have the external content
+      final restoredContent = await dbFile.readAsString();
+      expect(restoredContent, equals('SQLCipher-Encrypted-From-Boss-PC-V2'));
+    });
+
+    test('exportBackup copies backup to target destination path', () async {
+      final exportDest = File(p.join(tempDir.path, 'Exported_ClassKhata_Backup.db'));
+      final res = await backupRepo.exportBackup(targetFilePath: exportDest.path);
+      expect(res.isSuccess, isTrue);
+      expect(exportDest.existsSync(), isTrue);
+      expect(await exportDest.length(), greaterThan(0));
+    });
   });
 }

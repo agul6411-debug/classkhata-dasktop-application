@@ -243,6 +243,17 @@ class StudentRepositoryImpl implements StudentRepository {
   }
 
   @override
+  Future<Result<String>> getNextRollNumber() async {
+    try {
+      final next = await _dao.getNextRollNumber();
+      return Success(next);
+    } catch (e, st) {
+      await AppLogger.instance.error('getNextRollNumber error', error: e, stack: st);
+      return const Success('1');
+    }
+  }
+
+  @override
   Future<Result<List<Student>>> getStudentsByGuardianPhone(String phone) async {
     try {
       final rows = await _dao.getStudentsByGuardianPhone(phone);

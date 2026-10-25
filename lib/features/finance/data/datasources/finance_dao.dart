@@ -143,12 +143,13 @@ class FinanceDao {
         totalReceiptsPaisa += p.amountPaisa;
       }
 
-      // 2. Calculate Day's Cash Expenses (Outflows)
-      final outflows = await (_db.select(_db.expensesTable)
+      // 2. Calculate Day's Cash Outflows (Operational expenses, teacher cash salaries, cash supplier payments)
+      final outflows = await (_db.select(_db.cashBookEntriesTable)
             ..where((t) =>
+                t.entryType.equals('outflow') &
                 t.paymentMode.equals('cash') &
-                t.expenseDate.isBiggerOrEqualValue(startOfDay) &
-                t.expenseDate.isSmallerOrEqualValue(endOfDay)))
+                t.entryDate.isBiggerOrEqualValue(startOfDay) &
+                t.entryDate.isSmallerOrEqualValue(endOfDay)))
           .get();
 
       int totalExpensesPaisa = 0;
@@ -217,13 +218,16 @@ class FinanceDao {
 
     final totalIncomePaisa = feeIncomePaisa + otherIncomePaisa;
 
-    // 3. Total Expenses
-    final expenses = await (_db.select(_db.expensesTable)
-          ..where((t) => t.expenseDate.isBiggerOrEqualValue(from) & t.expenseDate.isSmallerOrEqualValue(to)))
+    // 3. Total Expenses (unifying operational expenses, payroll/salaries, and inventory purchases)
+    final outflows = await (_db.select(_db.cashBookEntriesTable)
+          ..where((t) =>
+              t.entryType.equals('outflow') &
+              t.entryDate.isBiggerOrEqualValue(from) &
+              t.entryDate.isSmallerOrEqualValue(to)))
         .get();
 
     int totalExpensesPaisa = 0;
-    for (final exp in expenses) {
+    for (final exp in outflows) {
       totalExpensesPaisa += exp.amountPaisa;
     }
 

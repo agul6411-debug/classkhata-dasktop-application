@@ -32,6 +32,12 @@ class BackupRepositoryImpl implements BackupRepository {
     required int createdBy,
   }) async {
     try {
+      try {
+        await _db.customStatement('PRAGMA wal_checkpoint(TRUNCATE);');
+      } catch (e) {
+        await AppLogger.instance.warning('wal_checkpoint before createBackup: $e');
+      }
+
       final srcFile = await _dbFile();
       if (!srcFile.existsSync()) {
         return const Failure(BackupFailure('Database file not found.'));
@@ -130,9 +136,9 @@ class BackupRepositoryImpl implements BackupRepository {
       final verifyResult = await verifyBackup(backupId);
       if (verifyResult.isFailure) {
         return Failure(verifyResult.fold(
-        onSuccess: (_) => const BackupFailure(''),
-        onFailure: (f) => f,
-      ));
+          onSuccess: (_) => const BackupFailure(''),
+          onFailure: (f) => f,
+        ));
       }
       if (!verifyResult.valueOrThrow) {
         return const Failure(BackupFailure('Backup checksum mismatch. Restore aborted.'));
@@ -142,15 +148,148 @@ class BackupRepositoryImpl implements BackupRepository {
             ..where((b) => b.id.equals(backupId)))
           .getSingle();
 
+      try {
+        await _db.customStatement('PRAGMA wal_checkpoint(TRUNCATE);');
+      } catch (_) {}
+
       final src = File(row.filePath);
       final dest = await _dbFile();
 
       await src.copy(dest.path);
+
+      // Clean up WAL and SHM companion files so stale WAL transactions are not replayed
+      final walFile = File('${dest.path}-wal');
+      if (walFile.existsSync()) {
+        try {
+          await walFile.delete();
+        } catch (_) {}
+      }
+      final shmFile = File('${dest.path}-shm');
+      if (shmFile.existsSync()) {
+        try {
+          await shmFile.delete();
+        } catch (_) {}
+      }
+
       await AppLogger.instance.info('Backup restored from ${src.path}. Restart required.');
       return const Success(null);
     } catch (e, st) {
       await AppLogger.instance.error('restoreBackup failed', error: e, stack: st);
       return Failure(BackupFailure('Restore failed.', technicalDetail: e.toString()));
+    }
+  }
+
+  @override
+  Future<Result<void>> restoreFromFile(File backupFile) async {
+    try {
+      if (!backupFile.existsSync()) {
+        return const Failure(BackupFailure('Selected backup file does not exist on disk.'));
+      }
+
+      final fileSize = await backupFile.length();
+      if (fileSize < 16) {
+        return const Failure(BackupFailure('The selected file is empty or too small to be a valid database.'));
+      }
+
+      // Check SQLite / SQLCipher header
+      final headerBytes = await backupFile.openRead(0, 16).first;
+      final headerStr = String.fromCharCodes(headerBytes);
+      if (!headerStr.startsWith('SQLite format 3') && !headerStr.startsWith('SQLCipher')) {
+        return const Failure(BackupFailure('The selected file is not a valid ClassKhata database snapshot.'));
+      }
+
+      try {
+        await _db.customStatement('PRAGMA wal_checkpoint(TRUNCATE);');
+      } catch (_) {}
+
+      final dest = await _dbFile();
+
+      // Copy the chosen file over the active DB
+      await backupFile.copy(dest.path);
+
+      // Clean up WAL and SHM companion files so stale transactions aren't replayed
+      final walFile = File('${dest.path}-wal');
+      if (walFile.existsSync()) {
+        try {
+          await walFile.delete();
+        } catch (_) {}
+      }
+      final shmFile = File('${dest.path}-shm');
+      if (shmFile.existsSync()) {
+        try {
+          await shmFile.delete();
+        } catch (_) {}
+      }
+
+      // Record in backups table so it shows in the UI
+      try {
+        final checksum = await _sha256File(backupFile);
+        final backupDir = await _backupDir();
+        final ts = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+        final archivedCopy = File(p.join(backupDir.path, 'imported_$ts.db'));
+        await backupFile.copy(archivedCopy.path);
+
+        await _db.into(_db.backupsMetaTable).insert(
+              BackupsMetaTableCompanion.insert(
+                filePath: archivedCopy.path,
+                type: 'imported',
+                sizeBytes: fileSize,
+                checksum: checksum,
+                createdBy: const Value(1),
+                isVerified: const Value(true),
+              ),
+            );
+      } catch (e) {
+        await AppLogger.instance.warning('Could not record imported backup: $e');
+      }
+
+      await AppLogger.instance.info('Database restored from external file: ${backupFile.path}');
+      return const Success(null);
+    } catch (e, st) {
+      await AppLogger.instance.error('restoreFromFile failed', error: e, stack: st);
+      return Failure(BackupFailure('Restore from file failed: $e', technicalDetail: e.toString()));
+    }
+  }
+
+  @override
+  Future<String> getBackupDirectoryPath() async {
+    final dir = await _backupDir();
+    return dir.path;
+  }
+
+  @override
+  Future<Result<String>> exportBackup({int? backupId, String? targetFilePath}) async {
+    try {
+      String sourcePath;
+      if (backupId != null) {
+        final row = await (_db.select(_db.backupsMetaTable)..where((b) => b.id.equals(backupId))).getSingleOrNull();
+        if (row == null) return const Failure(BackupFailure('Backup record not found.'));
+        sourcePath = row.filePath;
+      } else {
+        final backupRes = await createBackup(type: 'manual', createdBy: 1);
+        if (backupRes.isFailure) {
+          return Failure(backupRes.fold(onSuccess: (_) => const BackupFailure(''), onFailure: (f) => f));
+        }
+        sourcePath = backupRes.valueOrThrow.filePath;
+      }
+
+      final srcFile = File(sourcePath);
+      if (!srcFile.existsSync()) {
+        return const Failure(BackupFailure('Backup source file does not exist on disk.'));
+      }
+
+      String destPath = targetFilePath ?? '';
+      if (destPath.isEmpty) {
+        final downloads = await getDownloadsDirectory();
+        final ts = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+        destPath = p.join(downloads?.path ?? srcFile.parent.path, 'ClassKhata_Backup_$ts.db');
+      }
+
+      await srcFile.copy(destPath);
+      return Success(destPath);
+    } catch (e, st) {
+      await AppLogger.instance.error('exportBackup failed', error: e, stack: st);
+      return Failure(BackupFailure('Export backup failed: $e'));
     }
   }
 

@@ -473,6 +473,20 @@ class InventoryDao {
             totalDuePaisa: Value(updatedTotal),
           ),
         );
+      } else if (unitPricePaisa > 0 && quantity > 0) {
+        // 5. If sold directly for cash (not linked to voucher), record Cash Book Inflow
+        final totalSalePaisa = quantity * unitPricePaisa;
+        await _db.into(_db.cashBookEntriesTable).insert(
+              CashBookEntriesTableCompanion.insert(
+                entryType: 'inflow',
+                category: 'inventory_sale',
+                amountPaisa: totalSalePaisa,
+                description: 'Store Sale: ${item.name} x$quantity ($recipientType)',
+                paymentMode: const Value('cash'),
+                referenceId: Value(issuanceId),
+                createdBy: Value(createdBy),
+              ),
+            );
       }
 
       return (_db.select(_db.itemIssuancesTable)..where((t) => t.id.equals(issuanceId))).getSingle();

@@ -53,6 +53,8 @@ abstract interface class StudentRepository {
 
   Future<Result<void>> deleteStudent(int id);
 
+  Future<Result<String>> getNextRollNumber();
+
   Future<Result<List<Student>>> getStudentsByGuardianPhone(String phone);
 
   Future<Result<List<Student>>> getStudentsByFamilyId(int familyId);

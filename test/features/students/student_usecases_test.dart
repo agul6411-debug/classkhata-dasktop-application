@@ -96,6 +96,9 @@ class MockStudentRepository implements StudentRepository {
   Future<Result<void>> deleteStudent(int id) async => const Success(null);
 
   @override
+  Future<Result<String>> getNextRollNumber() async => Success('${students.length + 1}');
+
+  @override
   Future<Result<List<Student>>> getStudentsByGuardianPhone(String phone) async => const Success([]);
 
   @override

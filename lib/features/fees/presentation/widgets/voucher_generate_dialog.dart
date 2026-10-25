@@ -10,6 +10,7 @@ import '../../../../shared/widgets/primary_button.dart';
 import '../../../academics/domain/entities/academic_entities.dart';
 import '../../../academics/presentation/providers/academic_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../providers/fee_providers.dart';
 
 class VoucherGenerateDialog extends ConsumerStatefulWidget {
@@ -53,6 +54,7 @@ class _VoucherGenerateDialogState extends ConsumerState<VoucherGenerateDialog> {
     result.fold(
       onSuccess: (count) {
         ref.invalidate(vouchersListProvider);
+        ref.invalidate(dashboardKpisProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Generated $count voucher(s) successfully!')),
         );

@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/money/money.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../fees/presentation/widgets/fee_collection_wizard.dart';
 import '../../domain/entities/student_entities.dart';
 import '../providers/student_providers.dart';
 import 'student_fee_card_dialog.dart';
@@ -142,8 +143,11 @@ class StudentDetailsDialog extends ConsumerWidget {
                 child: profileAsync.when(
                   data: (profile) {
                     final age = _calculateAge(profile.dob);
+                    final effectiveMonthlyFee = (profile.customMonthlyFee != null && profile.customMonthlyFee! > 0)
+                        ? Money.fromRupees(profile.customMonthlyFee!.toDouble())
+                        : monthlyFee;
                     final discountPaisa = profile.monthlyDiscount * 100;
-                    final netFeePaisa = monthlyFee.paisa - discountPaisa;
+                    final netFeePaisa = effectiveMonthlyFee.paisa - discountPaisa;
                     final netFee = Money(netFeePaisa > 0 ? netFeePaisa : 0);
 
                     return SingleChildScrollView(
@@ -221,7 +225,7 @@ class StudentDetailsDialog extends ConsumerWidget {
                               children: [
                                 Row(
                                   children: [
-                                    _infoItem('Class Monthly Fee (Base)', monthlyFee.format()),
+                                    _infoItem('Agreed Monthly Tuition Fee', effectiveMonthlyFee.format()),
                                     _infoItem(
                                       'Monthly Discount',
                                       profile.monthlyDiscount > 0
@@ -321,6 +325,21 @@ class StudentDetailsDialog extends ConsumerWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF16A34A),
+                          foregroundColor: Colors.white,
+                        ),
+                        icon: const Icon(Icons.payments_outlined, size: 16),
+                        label: const Text('Collect Fee'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          showDialog(
+                            context: context,
+                            builder: (_) => FeeCollectionWizard(initialStudent: student),
+                          );
+                        },
+                      ),
                       OutlinedButton.icon(
                         icon: const Icon(Icons.credit_card, size: 16),
                         label: const Text('Fee Card'),

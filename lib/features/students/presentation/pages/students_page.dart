@@ -211,7 +211,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                       children: [
                         OutlinedButton.icon(
                           icon: const Icon(Icons.add, size: 16),
-                          label: const Text('+ Add Class'),
+                          label: const Text('Add Class'),
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.accent),
                             foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.accent,
@@ -223,7 +223,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                         ),
                         OutlinedButton.icon(
                           icon: const Icon(Icons.meeting_room, size: 16),
-                          label: const Text('+ Add Section'),
+                          label: const Text('Add Section'),
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.accent),
                             foregroundColor: isDark ? AppColors.darkTextPrimary : AppColors.accent,
@@ -436,6 +436,17 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                     phone.contains(query);
               }).toList();
             }
+
+            displayedStudents.sort((a, b) {
+              final aNum = int.tryParse(a.rollNumber.trim());
+              final bNum = int.tryParse(b.rollNumber.trim());
+              if (aNum != null && bNum != null) {
+                return aNum.compareTo(bNum);
+              }
+              if (aNum != null) return -1;
+              if (bNum != null) return 1;
+              return a.rollNumber.compareTo(b.rollNumber);
+            });
 
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -874,7 +885,9 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                                                   final profile = profiles[student.id];
                                                   final fatherName = profile?.fatherName ?? 'Not Specified';
                                                   final discount = profile?.monthlyDiscount ?? 0;
-                                                  final baseFee = batch?.monthlyFee ?? const Money(0);
+                                                  final baseFee = (profile?.customMonthlyFee != null && profile!.customMonthlyFee! > 0)
+                                                      ? Money.fromRupees(profile.customMonthlyFee!.toDouble())
+                                                      : (batch?.monthlyFee ?? const Money(0));
                                                   final netFee = Money(baseFee.paisa - (discount * 100) > 0 ? baseFee.paisa - (discount * 100) : 0);
 
                                                   final photoPath = profile?.photoPath;
@@ -1007,7 +1020,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                                                             ),
                                                             const SizedBox(width: 4),
                                                             IconButton(
-                                                              tooltip: 'Print ID Card',
+                                                              tooltip: 'Student ID Card',
                                                               icon: const Icon(Icons.badge_outlined, size: 18, color: Color(0xFF0D9488)),
                                                               splashRadius: 14,
                                                               padding: const EdgeInsets.all(4),
@@ -1163,6 +1176,18 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
               filtered = filtered.where((s) => s.status == _allFilterStatus).toList();
             }
 
+            // Natural numeric sequence sort by roll number
+            filtered.sort((a, b) {
+              final aNum = int.tryParse(a.rollNumber.trim());
+              final bNum = int.tryParse(b.rollNumber.trim());
+              if (aNum != null && bNum != null) {
+                return aNum.compareTo(bNum);
+              }
+              if (aNum != null) return -1;
+              if (bNum != null) return 1;
+              return a.rollNumber.compareTo(b.rollNumber);
+            });
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -1280,7 +1305,9 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                                     final profile = profiles[student.id];
                                     final fatherName = profile?.fatherName ?? 'Not Specified';
                                     final discount = profile?.monthlyDiscount ?? 0;
-                                    final baseFee = batch?.monthlyFee ?? const Money(0);
+                                    final baseFee = (profile?.customMonthlyFee != null && profile!.customMonthlyFee! > 0)
+                                        ? Money.fromRupees(profile.customMonthlyFee!.toDouble())
+                                        : (batch?.monthlyFee ?? const Money(0));
                                     final netFee = Money(baseFee.paisa - (discount * 100) > 0 ? baseFee.paisa - (discount * 100) : 0);
 
                                     final photoPath = profile?.photoPath;
@@ -1378,7 +1405,7 @@ class _StudentsPageState extends ConsumerState<StudentsPage> with SingleTickerPr
                                               ),
                                               const SizedBox(width: 4),
                                               IconButton(
-                                                tooltip: 'Print ID Card',
+                                                tooltip: 'Student ID Card',
                                                 icon: const Icon(Icons.badge_outlined, size: 18, color: Color(0xFF0D9488)),
                                                 splashRadius: 14,
                                                 padding: const EdgeInsets.all(4),

@@ -1,5 +1,4 @@
-/// Abstract backup repository.
-library;
+import 'dart:io';
 
 import '../../../../core/errors/failures.dart';
 import '../entities/backup_meta.dart';
@@ -18,4 +17,14 @@ abstract interface class BackupRepository {
   /// Restores the database from [backupId].
   /// Requires app restart after this call.
   Future<Result<void>> restoreBackup(int backupId);
+
+  /// Restores the database from an external file on disk.
+  /// Requires app restart after this call.
+  Future<Result<void>> restoreFromFile(File backupFile);
+
+  /// Returns the absolute path of the backup directory.
+  Future<String> getBackupDirectoryPath();
+
+  /// Exports a backup to a specified target file path.
+  Future<Result<String>> exportBackup({int? backupId, String? targetFilePath});
 }

@@ -43,3 +43,30 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Security & Secrets Protection
+.env
+.env.*
+*.env
+*.key
+*.pem
+*.cert
+*.pfx
+*.p12
+
+# Database & Local Data Protection
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+backups/
+*.bak
+*.backup
+*.dump
+
+# Logs & Crash Dumps
+*.log
+*.dmp
+*.crash
+crash_dumps/

@@ -363,7 +363,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
                 buildKpiCard(
                   title: 'Total Monthly Payroll',
                   value: Money(totalPayrollPaisa).format(),
-                  subtitle: 'Total Payable (${runs.length} Staff)',
+                  subtitle: 'Gross: ${Money(totalGrossPaisa).format()}',
                   icon: Icons.account_balance_wallet_outlined,
                   color: AppColors.accent,
                   onTap: () => setState(() => _payrollFilter = 'all'),
@@ -373,7 +373,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
                 buildKpiCard(
                   title: 'Paid Salaries',
                   value: Money(totalPaidPaisa).format(),
-                  subtitle: '$paidCount Staff Paid (Mil Chuki)',
+                  subtitle: '$paidCount Staff Disbursed',
                   icon: Icons.check_circle_outline,
                   color: Colors.green,
                   onTap: () => setState(() => _payrollFilter = 'paid'),
@@ -383,7 +383,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> with SingleTickerProv
                 buildKpiCard(
                   title: 'Pending Disbursement',
                   value: Money(totalPendingPaisa).format(),
-                  subtitle: '$pendingCount Staff Pending (Baqaya)',
+                  subtitle: '$pendingCount Staff Pending',
                   icon: Icons.pending_actions_outlined,
                   color: Colors.orange.shade800,
                   onTap: () => setState(() => _payrollFilter = 'pending'),

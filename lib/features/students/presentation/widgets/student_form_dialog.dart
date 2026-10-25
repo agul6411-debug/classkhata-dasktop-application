@@ -50,6 +50,7 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
   final _rollNumberCtrl = TextEditingController();
   String _gender = 'Male';
   DateTime? _dob;
+  String? _bloodGroup;
 
   // Guardian & Contact
   final _fatherNameCtrl = TextEditingController();
@@ -61,6 +62,7 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
   final _addressCtrl = TextEditingController();
 
   // School Fee Package & Dues
+  final _monthlyFeeCtrl = TextEditingController(text: '3500');
   final _admissionFeeCtrl = TextEditingController(text: '0');
   final _openingArrearsCtrl = TextEditingController(text: '0');
   final _monthlyDiscountCtrl = TextEditingController(text: '0');
@@ -106,6 +108,9 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
             _gender = profile.gender;
             _addressCtrl.text = profile.address ?? '';
             _photoPath = profile.photoPath;
+            if (profile.customMonthlyFee != null && profile.customMonthlyFee! > 0) {
+              _monthlyFeeCtrl.text = profile.customMonthlyFee.toString();
+            }
             _admissionFeeCtrl.text = profile.admissionFee.toString();
             _openingArrearsCtrl.text = profile.openingArrears.toString();
             _monthlyDiscountCtrl.text = profile.monthlyDiscount.toString();
@@ -113,8 +118,23 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
             if (profile.dob != null && profile.dob!.isNotEmpty) {
               _dob = DateTime.tryParse(profile.dob!);
             }
+            _bloodGroup = profile.bloodGroup;
           });
         }
+      });
+    } else {
+      // Auto-assign next sequential roll number for new student
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final repo = ref.read(studentRepositoryProvider);
+        final rollRes = await repo.getNextRollNumber();
+        rollRes.fold(
+          onSuccess: (nextRoll) {
+            if (mounted && _rollNumberCtrl.text.isEmpty) {
+              setState(() => _rollNumberCtrl.text = nextRoll);
+            }
+          },
+          onFailure: (_) {},
+        );
       });
     }
 
@@ -151,6 +171,7 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
     _fatherCnicCtrl.dispose();
     _fatherOccupationCtrl.dispose();
     _addressCtrl.dispose();
+    _monthlyFeeCtrl.dispose();
     _admissionFeeCtrl.dispose();
     _openingArrearsCtrl.dispose();
     _monthlyDiscountCtrl.dispose();
@@ -218,6 +239,7 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
     final repo = ref.read(studentRepositoryProvider);
     final db = ref.read(appDatabaseProvider);
 
+    final customFee = int.tryParse(_monthlyFeeCtrl.text.trim());
     final admissionFee = int.tryParse(_admissionFeeCtrl.text.trim()) ?? 0;
     final openingArrears = int.tryParse(_openingArrearsCtrl.text.trim()) ?? 0;
     final monthlyDiscount = int.tryParse(_monthlyDiscountCtrl.text.trim()) ?? 0;
@@ -229,7 +251,9 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
       fatherOccupation: _fatherOccupationCtrl.text.trim().isEmpty ? null : _fatherOccupationCtrl.text.trim(),
       gender: _gender,
       dob: _dob?.toIso8601String().split('T').first,
+      bloodGroup: _bloodGroup,
       address: _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
+      customMonthlyFee: (customFee != null && customFee > 0) ? customFee : null,
       admissionFee: admissionFee,
       openingArrears: openingArrears,
       monthlyDiscount: monthlyDiscount,
@@ -292,7 +316,9 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
             final monthYear = '${now.year}-${now.month.toString().padLeft(2, '0')}';
             final academicData = ref.read(academicDataProvider).valueOrNull;
             final batch = academicData?.batches.where((b) => b.id == _selectedBatchId).firstOrNull;
-            final baseFee = batch?.monthlyFee.paisa ?? 0;
+            final baseFee = (customFee != null && customFee > 0)
+                ? (customFee * 100)
+                : (batch?.monthlyFee.paisa ?? 0);
             final totalDue = baseFee + (openingArrears * 100) + (admissionFee * 100) - (monthlyDiscount * 100);
 
             // Record initial voucher with opening dues
@@ -446,8 +472,8 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                                       Expanded(
                                         child: AppTextField(
                                           controller: _rollNumberCtrl,
-                                          label: 'Roll / Admission No.',
-                                          hint: 'Auto if empty',
+                                          label: 'Roll No. (Auto-assigned) *',
+                                          hint: 'Auto-assigned',
                                         ),
                                       ),
                                       const SizedBox(width: 10),
@@ -461,6 +487,65 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                                             DropdownMenuItem(value: 'Other', child: Text('Other')),
                                           ],
                                           onChanged: (val) => setState(() => _gender = val ?? 'Male'),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () async {
+                                            final now = DateTime.now();
+                                            final picked = await showDatePicker(
+                                              context: context,
+                                              initialDate: _dob ?? DateTime(now.year - 10, now.month, now.day),
+                                              firstDate: DateTime(1990),
+                                              lastDate: now,
+                                            );
+                                            if (picked != null) {
+                                              setState(() => _dob = picked);
+                                            }
+                                          },
+                                          child: InputDecorator(
+                                            decoration: InputDecoration(
+                                              labelText: 'Date of Birth (DOB)',
+                                              suffixIcon: _dob != null
+                                                  ? IconButton(
+                                                      icon: const Icon(Icons.clear, size: 18),
+                                                      onPressed: () => setState(() => _dob = null),
+                                                    )
+                                                  : const Icon(Icons.calendar_today, size: 18),
+                                            ),
+                                            child: Text(
+                                              _dob != null
+                                                  ? '${_dob!.day.toString().padLeft(2, '0')}/${_dob!.month.toString().padLeft(2, '0')}/${_dob!.year}'
+                                                  : 'Select Date of Birth',
+                                              style: TextStyle(
+                                                color: _dob != null ? null : Colors.grey.shade600,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: DropdownButtonFormField<String?>(
+                                          value: _bloodGroup,
+                                          decoration: const InputDecoration(labelText: 'Blood Group'),
+                                          items: const [
+                                            DropdownMenuItem(value: null, child: Text('Not Specified')),
+                                            DropdownMenuItem(value: 'A+', child: Text('A+')),
+                                            DropdownMenuItem(value: 'A-', child: Text('A-')),
+                                            DropdownMenuItem(value: 'B+', child: Text('B+')),
+                                            DropdownMenuItem(value: 'B-', child: Text('B-')),
+                                            DropdownMenuItem(value: 'AB+', child: Text('AB+')),
+                                            DropdownMenuItem(value: 'AB-', child: Text('AB-')),
+                                            DropdownMenuItem(value: 'O+', child: Text('O+')),
+                                            DropdownMenuItem(value: 'O-', child: Text('O-')),
+                                          ],
+                                          onChanged: (val) => setState(() => _bloodGroup = val),
                                         ),
                                       ),
                                     ],
@@ -512,12 +597,24 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                                     items: availableSections.map((b) {
                                       return DropdownMenuItem(
                                         value: b.id,
-                                        child: Text('${b.name} (${b.monthlyFee.format()}/mo)'),
+                                        child: Text(b.name),
                                       );
                                     }).toList(),
                                     onChanged: _selectedClassId == null || availableSections.isEmpty
                                         ? null
-                                        : (val) => setState(() => _selectedBatchId = val),
+                                        : (val) {
+                                            setState(() {
+                                              _selectedBatchId = val;
+                                              if (val != null) {
+                                                final sel = availableSections.where((b) => b.id == val).firstOrNull;
+                                                if (sel != null &&
+                                                    (_monthlyFeeCtrl.text.isEmpty || _monthlyFeeCtrl.text == '0') &&
+                                                    sel.monthlyFee.paisa > 0) {
+                                                  _monthlyFeeCtrl.text = (sel.monthlyFee.paisa ~/ 100).toString();
+                                                }
+                                              }
+                                            });
+                                          },
                                     validator: (v) => v == null ? 'Section is required' : null,
                                   ),
                                 ),
@@ -592,9 +689,30 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: AppTextField(
+                                controller: _fatherOccupationCtrl,
+                                label: 'Father Occupation',
+                                hint: 'e.g. Business / Government / Private',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: AppTextField(
                                 controller: _phoneCtrl,
                                 label: 'Alternate / Student Phone',
                                 keyboardType: TextInputType.phone,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: AppTextField(
+                                controller: _emailCtrl,
+                                label: 'Student / Contact Email',
+                                keyboardType: TextInputType.emailAddress,
+                                hint: 'student@example.com',
                               ),
                             ),
                           ],
@@ -614,18 +732,27 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                           children: [
                             Expanded(
                               child: AppTextField(
-                                controller: _admissionFeeCtrl,
-                                label: 'Admission Fee (Rs.)',
-                                hint: 'One-time admission charge',
+                                controller: _monthlyFeeCtrl,
+                                label: 'Monthly Tuition Fee (Rs.) *',
+                                hint: 'e.g. 3500',
                                 keyboardType: TextInputType.number,
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) {
+                                    return 'Monthly Tuition Fee is required';
+                                  }
+                                  if (int.tryParse(v.trim()) == null) {
+                                    return 'Please enter a valid amount';
+                                  }
+                                  return null;
+                                },
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: AppTextField(
-                                controller: _openingArrearsCtrl,
-                                label: 'Opening Outstanding Dues (Rs.)',
-                                hint: 'Pichla baqaya / Previous dues',
+                                controller: _admissionFeeCtrl,
+                                label: 'Admission Fee (Rs.)',
+                                hint: 'One-time admission charge',
                                 keyboardType: TextInputType.number,
                               ),
                             ),
@@ -636,21 +763,28 @@ class _StudentFormDialogState extends ConsumerState<StudentFormDialog> {
                           children: [
                             Expanded(
                               child: AppTextField(
-                                controller: _monthlyDiscountCtrl,
-                                label: 'Monthly Concession / Discount (Rs.)',
-                                hint: 'e.g. 500',
+                                controller: _openingArrearsCtrl,
+                                label: 'Opening Outstanding Dues (Rs.)',
+                                hint: 'Previous unpaid balance',
                                 keyboardType: TextInputType.number,
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: AppTextField(
-                                controller: _discountReasonCtrl,
-                                label: 'Discount Reason',
-                                hint: 'e.g. Sibling discount / Staff child',
+                                controller: _monthlyDiscountCtrl,
+                                label: 'Monthly Concession / Discount (Rs.)',
+                                hint: 'e.g. 500',
+                                keyboardType: TextInputType.number,
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 10),
+                        AppTextField(
+                          controller: _discountReasonCtrl,
+                          label: 'Discount / Concession Reason',
+                          hint: 'e.g. Sibling discount / Staff child / Orphan concession',
                         ),
                         const SizedBox(height: 14),
 

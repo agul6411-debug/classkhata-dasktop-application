@@ -10,6 +10,7 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/error_banner.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../providers/finance_providers.dart';
 
 class AddExpenseDialog extends ConsumerStatefulWidget {
@@ -69,6 +70,7 @@ class _AddExpenseDialogState extends ConsumerState<AddExpenseDialog> {
     result.fold(
       onSuccess: (_) {
         ref.invalidate(expensesListProvider);
+        ref.invalidate(dashboardProfitLossProvider);
         Navigator.of(context).pop(true);
       },
       onFailure: (f) => setState(() {

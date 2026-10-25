@@ -96,11 +96,17 @@ class StudentDao {
     });
   }
 
-  /// Generates the next roll number (e.g. STD-0001).
+  /// Generates the next sequential numeric roll number (e.g. 1, 2, 24).
   Future<String> getNextRollNumber() async {
-    final count = await _db.select(_db.studentsTable).get();
-    final nextNumber = count.length + 1;
-    return 'STD-${nextNumber.toString().padLeft(4, '0')}';
+    final students = await _db.select(_db.studentsTable).get();
+    int maxRoll = 0;
+    for (final s in students) {
+      final rollNum = int.tryParse(s.rollNumber.trim());
+      if (rollNum != null && rollNum > maxRoll) {
+        maxRoll = rollNum;
+      }
+    }
+    return (maxRoll + 1).toString();
   }
 
   // ---------------------------------------------------------------------------

@@ -826,11 +826,38 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                   ),
                 ],
               ),
-              PrimaryButton(
-                label: 'Create Backup Now',
-                icon: Icons.backup,
-                isLoading: _isBackingUp,
-                onPressed: _triggerBackup,
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  PrimaryButton(
+                    label: 'Create Backup',
+                    icon: Icons.backup,
+                    isLoading: _isBackingUp,
+                    onPressed: _triggerBackup,
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFDC2626),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                    ),
+                    icon: const Icon(Icons.settings_backup_restore, size: 18),
+                    label: const Text('Restore from File', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: _pickAndRestoreFromFile,
+                  ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.file_download_outlined, size: 16),
+                    label: const Text('Export File'),
+                    onPressed: () => _exportBackup(),
+                  ),
+                  IconButton(
+                    tooltip: 'Open Backups Folder in Windows Explorer',
+                    icon: const Icon(Icons.folder_open),
+                    onPressed: _openBackupsFolder,
+                  ),
+                ],
               ),
             ],
           ),
@@ -919,6 +946,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
                                   ),
                                   const SizedBox(width: 4),
                                   TextButton(
+                                    child: const Text('Export', style: TextStyle(color: Colors.teal)),
+                                    onPressed: () => _exportBackup(backupId: b.id),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  TextButton(
                                     child: const Text('Restore', style: TextStyle(color: Colors.redAccent)),
                                     onPressed: () => _confirmRestore(b.id),
                                   ),
@@ -981,6 +1013,175 @@ class _SettingsPageState extends ConsumerState<SettingsPage> with SingleTickerPr
         ],
       ),
     );
+  }
+
+  Future<void> _pickAndRestoreFromFile() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        dialogTitle: 'Select ClassKhata Backup File to Restore',
+      );
+
+      if (result == null || result.files.single.path == null) return;
+
+      final selectedFile = File(result.files.single.path!);
+      final fileName = result.files.single.name;
+      final sizeKb = (await selectedFile.length()) ~/ 1024;
+
+      if (!mounted) return;
+
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+              SizedBox(width: 10),
+              Text('Confirm Database Restore'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'CRITICAL WARNING:\nRestoring this backup file will overwrite your current active database records with the snapshot from this file.',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Selected File: $fileName', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                    const SizedBox(height: 4),
+                    Text('File Size: $sizeKb KB', style: const TextStyle(color: Colors.black87)),
+                    const SizedBox(height: 4),
+                    Text('Location: ${selectedFile.path}', style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text('Are you sure you wish to proceed with restoring this backup?'),
+            ],
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Proceed with Restore'),
+            ),
+          ],
+        ),
+      );
+
+      if (proceed != true || !mounted) return;
+
+      final repo = ref.read(backupRepositoryProvider);
+      final res = await repo.restoreFromFile(selectedFile);
+
+      if (!mounted) return;
+
+      res.fold(
+        onSuccess: (_) {
+          ref.invalidate(backupsListProvider);
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.teal, size: 28),
+                  SizedBox(width: 10),
+                  Text('Restore Complete'),
+                ],
+              ),
+              content: Text(
+                'Database restored successfully from "$fileName".\n\nPlease restart the application now so all restored student, fee, academic, and accounting records reload completely.',
+              ),
+              actions: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        },
+        onFailure: (f) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Restore failed: ${f.message}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking backup file: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportBackup({int? backupId}) async {
+    try {
+      final repo = ref.read(backupRepositoryProvider);
+      final res = await repo.exportBackup(backupId: backupId);
+      if (!mounted) return;
+      res.fold(
+        onSuccess: (destPath) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Backup exported successfully:\n$destPath'),
+              backgroundColor: Colors.teal,
+              duration: const Duration(seconds: 6),
+              action: SnackBarAction(
+                label: 'Show in Folder',
+                textColor: Colors.white,
+                onPressed: () => Process.run('explorer.exe', ['/select,', destPath]),
+              ),
+            ),
+          );
+        },
+        onFailure: (f) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Export failed: ${f.message}'), backgroundColor: Colors.red),
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error exporting backup: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _openBackupsFolder() async {
+    try {
+      final repo = ref.read(backupRepositoryProvider);
+      final folderPath = await repo.getBackupDirectoryPath();
+      await Process.run('explorer.exe', [folderPath]);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open folder: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------
